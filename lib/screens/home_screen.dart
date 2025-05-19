@@ -1,8 +1,10 @@
-import 'package:alertmate360/screens/emergency_contacts_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'sos_screen.dart';
 import 'health_stats_screen.dart';
 import 'map_screen.dart';
+import 'emergency_contacts_screen.dart';
+import 'login_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -35,6 +37,7 @@ class HomeScreen extends StatelessWidget {
               style: TextStyle(fontSize: 16, color: Colors.black54),
             ),
             SizedBox(height: 30),
+
             // SOS Feature Card
             Card(
               elevation: 4,
@@ -58,6 +61,7 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             SizedBox(height: 20),
+
             // Health Stats Feature Card
             Card(
               elevation: 4,
@@ -81,6 +85,7 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             SizedBox(height: 20),
+
             // Map Feature Card
             Card(
               elevation: 4,
@@ -100,6 +105,7 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             SizedBox(height: 20),
+
             // Emergency Contacts Feature Card
             Card(
               elevation: 4,
@@ -125,12 +131,32 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
             SizedBox(height: 20),
+
             Spacer(),
-            Text(
-              "Powered by AlertMate Team",
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+
+            // Logout Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                icon: Icon(Icons.logout, color: Colors.white),
+                label: Text("Logout", style: TextStyle(color: Colors.white)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  padding: EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () async {
+                  await FirebaseAuth.instance.signOut();
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => LoginScreen()),
+                  );
+                },
+              ),
             ),
-            SizedBox(height: 10),
+            SizedBox(height: 20),
           ],
         ),
       ),
