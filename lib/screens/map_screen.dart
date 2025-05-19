@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:location/location.dart';
 
 class MapScreen extends StatefulWidget {
   @override
@@ -7,33 +8,85 @@ class MapScreen extends StatefulWidget {
 }
 
 class _MapScreenState extends State<MapScreen> {
-  late GoogleMapController _mapController;
+  GoogleMapController? mapController;
+  LatLng? _currentLocation;
+  bool _isLoading = true; // Add a loading state
 
-  // Sample coordinates (Bangalore)
-  static const LatLng _center = LatLng(12.9716, 77.5946);
+  @override
+  void initState() {
+    super.initState();
+    _fetchLocation();
+  }
 
-  void _onMapCreated(GoogleMapController controller) {
-    _mapController = controller;
+  Future<void> _fetchLocation() async {
+    final location = Location();
+    bool serviceEnabled = await location.serviceEnabled();
+    if (!serviceEnabled) {
+      serviceEnabled = await location.requestService();
+      if (!serviceEnabled) {
+        setState(() {
+          _isLoading = false; // Location services not enabled
+        });
+        return;
+      }
+    }
+
+    PermissionStatus permissionGranted = await location.hasPermission();
+    if (permissionGranted == PermissionStatus.denied) {
+      permissionGranted = await location.requestPermission();
+      if (permissionGranted != PermissionStatus.granted) {
+        setState(() {
+          _isLoading = false; // Location permission denied
+        });
+        return;
+      }
+    }
+
+    try {
+      final userLocation = await location.getLocation();
+      setState(() {
+        _currentLocation = LatLng(
+          userLocation.latitude!,
+          userLocation.longitude!,
+        );
+        _isLoading = false; // Location fetched successfully
+      });
+    } catch (e) {
+      print("Error fetching location: $e");
+      setState(() {
+        _isLoading = false; // Error during location fetch
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Geo-Fencing"),
-        backgroundColor: Color(0xFF3E82C6),
+        title: Text("Your Location"),
+        backgroundColor: Colors.green,
       ),
-      body: GoogleMap(
-        onMapCreated: _onMapCreated,
-        initialCameraPosition: CameraPosition(target: _center, zoom: 15.0),
-        markers: {
-          Marker(
-            markerId: MarkerId("currentLocation"),
-            position: _center,
-            infoWindow: InfoWindow(title: "You are here"),
-          ),
-        },
-      ),
+      body:
+          _isLoading
+              ? Center(child: CircularProgressIndicator())
+              : _currentLocation == null
+              ? Center(child: Text("Could not retrieve location."))
+              : GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: _currentLocation!,
+                  zoom: 15,
+                ),
+                markers: {
+                  Marker(
+                    markerId: MarkerId("current"),
+                    position: _currentLocation!,
+                    infoWindow: InfoWindow(title: "You are here"),
+                  ),
+                },
+                onMapCreated: (controller) {
+                  mapController = controller;
+                },
+              ),
     );
   }
 }

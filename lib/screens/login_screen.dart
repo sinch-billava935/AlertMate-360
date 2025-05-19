@@ -1,5 +1,8 @@
+import 'package:alertmate360/screens/forgot_password_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'onboarding_screen.dart';
+import 'signup_screen.dart'; // make sure the path is correct
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -16,7 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: Color(0xFFF2F7FF), // light background
       appBar: AppBar(
-        title: Text("Login"),
+        title: Text("Login", style: TextStyle(color: Colors.white)),
         backgroundColor: Color(0xFF003366),
         centerTitle: true,
       ),
@@ -77,7 +80,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {
-                    // TODO: Add forgot password screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => ForgotPasswordScreen()),
+                    );
                   },
                   child: Text("Forgot Password?"),
                 ),
@@ -86,12 +92,27 @@ class _LoginScreenState extends State<LoginScreen> {
 
               // Login Button
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   if (_formKey.currentState!.validate()) {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => OnboardingScreen()),
-                    );
+                    try {
+                      final userCredential = await FirebaseAuth.instance
+                          .signInWithEmailAndPassword(
+                            email: _emailController.text.trim(),
+                            password: _passwordController.text.trim(),
+                          );
+
+                      // Navigate to Onboarding if login successful
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => OnboardingScreen()),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text("Login failed: ${e.toString()}"),
+                        ),
+                      );
+                    }
                   }
                 },
                 style: ElevatedButton.styleFrom(
@@ -101,7 +122,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: Text("Login", style: TextStyle(fontSize: 16)),
+                child: Text(
+                  "Login",
+                  style: TextStyle(fontSize: 16, color: Colors.white),
+                ),
               ),
 
               SizedBox(height: 30),
@@ -113,7 +137,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   Text("Don't have an account? "),
                   TextButton(
                     onPressed: () {
-                      // TODO: Navigate to sign-up screen
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => SignupScreen()),
+                      );
                     },
                     child: Text("Sign Up"),
                   ),

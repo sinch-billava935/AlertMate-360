@@ -125,7 +125,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   _currentPage == onboardingData.length - 1
                       ? "Get Started"
                       : "Next",
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white, // Text color is white
+                  ),
                 ),
               ),
             ),

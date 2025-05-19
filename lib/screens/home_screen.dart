@@ -1,6 +1,8 @@
+import 'package:alertmate360/screens/emergency_contacts_screen.dart';
 import 'package:flutter/material.dart';
 import 'sos_screen.dart';
 import 'health_stats_screen.dart';
+import 'map_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   @override
@@ -8,12 +10,12 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Color(0xFFF2F7FF), // Light bluish background
       appBar: AppBar(
-        title: Text("AlertMate 360"),
+        title: Text("AlertMate 360", style: TextStyle(color: Colors.white)),
         centerTitle: true,
         backgroundColor: Color(0xFF3E82C6), // Darker blue
       ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(8.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -32,7 +34,7 @@ class HomeScreen extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16, color: Colors.black54),
             ),
-            SizedBox(height: 40),
+            SizedBox(height: 30),
             // SOS Feature Card
             Card(
               elevation: 4,
@@ -78,6 +80,51 @@ class HomeScreen extends StatelessWidget {
                 },
               ),
             ),
+            SizedBox(height: 20),
+            // Map Feature Card
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListTile(
+                leading: Icon(Icons.map_rounded, color: Colors.blue, size: 32),
+                title: Text("Map View"),
+                subtitle: Text("View your current location"),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => MapScreen()),
+                  );
+                },
+              ),
+            ),
+            SizedBox(height: 20),
+            // Emergency Contacts Feature Card
+            Card(
+              elevation: 4,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ListTile(
+                leading: Icon(
+                  Icons.contacts,
+                  color: Colors.deepPurple,
+                  size: 32,
+                ),
+                title: Text("Emergency Contacts"),
+                subtitle: Text("Manage your emergency contact list"),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => EmergencyContactsScreen(),
+                    ),
+                  );
+                },
+              ),
+            ),
+            SizedBox(height: 20),
             Spacer(),
             Text(
               "Powered by AlertMate Team",

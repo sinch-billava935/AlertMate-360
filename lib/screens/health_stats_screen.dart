@@ -10,7 +10,7 @@ class HealthStatsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Health Stats"),
+        title: Text("Health Stats", style: TextStyle(color: Colors.white)),
         backgroundColor: Color.fromARGB(255, 62, 130, 198),
       ),
       backgroundColor: Color(0xFFF2F7FF), // Light background
