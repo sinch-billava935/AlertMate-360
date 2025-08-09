@@ -11,10 +11,11 @@ setGlobalOptions({region: "asia-south1"});
 admin.initializeApp();
 
 // ✅ Twilio Config
-const twilioSid = "121";
-const twilioAuth = "34";
-const twilioFrom = "23";// Twilio phone number
-const twilioTo = "12"; // Recipient phone number
+const twilioSid = 
+const twilioAuth = 
+const twilioFrom = // Twilio phone number
+const twilioTo = 
+
 
 const client = twilio(twilioSid, twilioAuth);
 
