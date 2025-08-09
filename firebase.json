@@ -1,1 +1,39 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"alertmatefb-a1c17","appId":"1:17519692980:android:3c4bd42525c71b3a3fdbe1","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"alertmatefb-a1c17","configurations":{"android":"1:17519692980:android:3c4bd42525c71b3a3fdbe1","ios":"1:17519692980:ios:4a45e5a760278d1c3fdbe1"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "alertmatefb-a1c17",
+          "appId": "1:17519692980:android:3c4bd42525c71b3a3fdbe1",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "alertmatefb-a1c17",
+          "configurations": {
+            "android": "1:17519692980:android:3c4bd42525c71b3a3fdbe1",
+            "ios": "1:17519692980:ios:4a45e5a760278d1c3fdbe1"
+          }
+        }
+      }
+    }
+  },
+ "functions": [
+  {
+    "source": "functions",
+    "codebase": "default",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "firebase-debug.log",
+      "firebase-debug.*.log",
+      "*.local"
+    ],
+    "predeploy": [
+      "npm --prefix \"$RESOURCE_DIR\" run lint"
+    ]
+  }
+]
+
+}
