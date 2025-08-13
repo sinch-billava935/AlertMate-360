@@ -1,5 +1,7 @@
 {
   "projects": {
     "default": "alertmatefb-a1c17"
-  }
+  },
+  "targets": {},
+  "etags": {}
 }

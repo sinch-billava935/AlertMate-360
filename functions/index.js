@@ -1,4 +1,3 @@
-
 const {onDocumentCreated} = require("firebase-functions/v2/firestore");
 const {setGlobalOptions} = require("firebase-functions/v2");
 const admin = require("firebase-admin");
@@ -10,16 +9,23 @@ setGlobalOptions({region: "asia-south1"});
 // ✅ Initialize Firebase Admin
 admin.initializeApp();
 
-// ✅ Twilio Config
-const twilioSid = 
-const twilioAuth = 
-const twilioFrom = // Twilio phone number
-const twilioTo = 
-
+// ✅ Twilio Config (unchanged as requested)
+const twilioSid ="";
+const twilioAuth ="";
+const twilioFrom ="";
+const twilioTo ="";
 
 const client = twilio(twilioSid, twilioAuth);
 
-// ✅ Firestore Trigger: Send SMS when SOS doc is created
+// 📌 List of recipients
+const recipients = [
+  twilioTo,
+  "",
+  "",
+  "",
+];
+
+// ✅ Firestore Trigger: Send SMS to multiple recipients
 exports.sosAlert = onDocumentCreated(
     "users/{userId}/sos/{sosId}",
     async (event) => {
@@ -29,25 +35,35 @@ exports.sosAlert = onDocumentCreated(
       const latitude = data.latitude || "Unknown";
       const longitude = data.longitude || "Unknown";
 
-      // Handle timestamp safely
+      // Format time in a more readable way
       let time = new Date();
       if (data.timestamp && data.timestamp.toDate) {
         time = data.timestamp.toDate();
       }
+      const ft = time.toLocaleString("en-IN", {timeZone: "Asia/kolkata"});
 
-      const message = `🚨 SOS Alert!\nUser: ${userId}\nTime: ${time}\n` +
-      `Location: ${latitude}, ${longitude}`;
+      // 📌 Professional message format
+      const message =
+`🚨 Emergency SOS Alert 🚨
+📌 User ID: ${userId}
+🕒 Time: ${ft}
+🔗 Google Maps: https://maps.google.com/?q=${latitude},${longitude}
+`;
 
       try {
-        await client.messages.create({
-          body: message,
-          from: twilioFrom,
-          to: twilioTo,
-        });
+        await Promise.all(
+            recipients.map((to) =>
+              client.messages.create({
+                body: message,
+                from: twilioFrom,
+                to,
+              }),
+            ),
+        );
 
-        console.log("✅ SOS SMS sent successfully");
+        console.log("✅ SOS SMS sent to all recipients successfully");
       } catch (err) {
-        console.error("❌ Failed to send SMS:", err);
+        console.error("❌ Failed to send SMS to some recipients:", err);
       }
     },
 );
