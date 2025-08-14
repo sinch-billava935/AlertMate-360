@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'login_screen.dart';
+import 'onboarding_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   @override
@@ -10,6 +13,7 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _nameController = TextEditingController(); // added
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
@@ -17,16 +21,34 @@ class _SignupScreenState extends State<SignupScreen> {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
       try {
-        await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: _emailController.text.trim(),
-          password: _passwordController.text.trim(),
-        );
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("✅ Account created! Please login.")),
-        );
+        final userCredential = await FirebaseAuth.instance
+            .createUserWithEmailAndPassword(
+              email: _emailController.text.trim(),
+              password: _passwordController.text.trim(),
+            );
+
+        final uid = userCredential.user!.uid;
+
+        // Save the user's name in Firestore
+        await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'name': _nameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'uid': uid,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        // Save the name locally for SOS messages
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_name', _nameController.text.trim());
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("✅ Account created!")));
+
+        // Navigate to onboarding or home screen
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => LoginScreen()),
+          MaterialPageRoute(builder: (_) => OnboardingScreen()),
         );
       } catch (e) {
         ScaffoldMessenger.of(
@@ -69,7 +91,20 @@ class _SignupScreenState extends State<SignupScreen> {
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.black54),
               ),
-              SizedBox(height: 40),
+              SizedBox(height: 30),
+
+              // Name Field
+              TextFormField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: "Full Name",
+                  prefixIcon: Icon(Icons.person),
+                  border: OutlineInputBorder(),
+                ),
+                validator:
+                    (value) => value!.isEmpty ? 'Please enter your name' : null,
+              ),
+              SizedBox(height: 20),
 
               // Email Field
               TextFormField(
@@ -119,7 +154,6 @@ class _SignupScreenState extends State<SignupScreen> {
                           style: TextStyle(fontSize: 16, color: Colors.white),
                         ),
               ),
-
               SizedBox(height: 25),
 
               // Already have an account

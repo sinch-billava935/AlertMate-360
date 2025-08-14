@@ -1,8 +1,10 @@
 import 'package:alertmate360/screens/forgot_password_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'onboarding_screen.dart';
-import 'signup_screen.dart'; // make sure the path is correct
+import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -17,7 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF2F7FF), // light background
+      backgroundColor: Color(0xFFF2F7FF),
       appBar: AppBar(
         title: Text("Login", style: TextStyle(color: Colors.white)),
         backgroundColor: Color(0xFF003366),
@@ -47,7 +49,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               SizedBox(height: 40),
 
-              // Email Field
               TextFormField(
                 controller: _emailController,
                 decoration: InputDecoration(
@@ -60,7 +61,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               SizedBox(height: 20),
 
-              // Password Field
               TextFormField(
                 controller: _passwordController,
                 obscureText: true,
@@ -72,10 +72,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 validator:
                     (value) => value!.isEmpty ? 'Please enter password' : null,
               ),
-
               SizedBox(height: 15),
 
-              // Forgot Password
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
@@ -90,7 +88,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               SizedBox(height: 20),
 
-              // Login Button
               ElevatedButton(
                 onPressed: () async {
                   if (_formKey.currentState!.validate()) {
@@ -100,6 +97,21 @@ class _LoginScreenState extends State<LoginScreen> {
                             email: _emailController.text.trim(),
                             password: _passwordController.text.trim(),
                           );
+
+                      // 🔹 Fetch user name from Firestore
+                      final uid = userCredential.user!.uid;
+                      final snapshot =
+                          await FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(uid)
+                              .get();
+
+                      String userName = snapshot['name'] ?? 'User';
+
+                      // 🔹 Save name locally using SharedPreferences
+                      SharedPreferences prefs =
+                          await SharedPreferences.getInstance();
+                      await prefs.setString('userName', userName);
 
                       // Navigate to Onboarding if login successful
                       Navigator.pushReplacement(
@@ -127,10 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(fontSize: 16, color: Colors.white),
                 ),
               ),
-
               SizedBox(height: 30),
-
-              // Sign Up Option
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

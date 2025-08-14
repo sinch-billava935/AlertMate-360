@@ -33,14 +33,22 @@ class _SosScreenState extends State<SosScreen> {
   /// Send SOS data to Firestore (Triggers Cloud Function)
   Future<void> _sendSosToFirestore() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      throw Exception("User not logged in");
-    }
+    if (user == null) throw Exception("User not logged in");
+
+    // Fetch user's name from Firestore
+    final userDoc =
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+    final userName = userDoc.data()?['name'] ?? 'Unknown';
 
     // Optionally include location
     final loc = await _getLocation();
 
     final sosData = {
+      'userName': userName, // ✅ Add user name
       'timestamp': FieldValue.serverTimestamp(),
       'latitude': loc['latitude'],
       'longitude': loc['longitude'],
@@ -86,9 +94,7 @@ class _SosScreenState extends State<SosScreen> {
 
                     // Disable the button for 5 seconds
                     Future.delayed(const Duration(seconds: 5), () {
-                      if (mounted) {
-                        setState(() => sosTriggered = false);
-                      }
+                      if (mounted) setState(() => sosTriggered = false);
                     });
 
                     ScaffoldMessenger.of(context).showSnackBar(
