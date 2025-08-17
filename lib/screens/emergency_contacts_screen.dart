@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 class EmergencyContactsScreen extends StatefulWidget {
   @override
@@ -14,23 +16,202 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
   final _relationController = TextEditingController();
   final uid = FirebaseAuth.instance.currentUser!.uid;
 
+  // ✅ Your deployed HTTPS function base and routes
+  static const String _verifyBase =
+      'https://asia-south1-alertmatefb-a1c17.cloudfunctions.net/verify';
+  final Uri _startVerificationUri = Uri.parse(
+    '$_verifyBase/start-verification',
+  );
+  final Uri _checkVerificationUri = Uri.parse(
+    '$_verifyBase/check-verification',
+  );
+
+  bool _busy = false;
+
+  // ---------------- Helpers ----------------
+
+  Future<Map<String, String>> _authHeaders() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('Not signed in');
+    final idToken = await user.getIdToken();
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer $idToken',
+    };
+  }
+
+  // Simple E.164 check; use libphonenumber for production
+  bool _looksLikeE164(String s) {
+    final re = RegExp(r'^\+\d{7,15}$');
+    return re.hasMatch(s.trim());
+  }
+
+  // Convenience: if user types 10 digits (India), auto-prefix +91
+  String _toE164IndiaIfNeeded(String input) {
+    final t = input.trim();
+    if (t.startsWith('+')) return t;
+    if (RegExp(r'^\d{10}$').hasMatch(t)) return '+91$t';
+    return t;
+  }
+
+  Future<void> _startVerification(String phoneE164) async {
+    final headers = await _authHeaders();
+    final res = await http.post(
+      _startVerificationUri,
+      headers: headers,
+      body: jsonEncode({'phone': phoneE164}),
+    );
+    if (res.statusCode >= 400) {
+      final body = res.body.isNotEmpty ? jsonDecode(res.body) : null;
+      throw Exception(body?['error'] ?? 'Failed to start verification');
+    }
+  }
+
+  Future<bool> _checkVerification(String phoneE164, String code) async {
+    final headers = await _authHeaders();
+    final res = await http.post(
+      _checkVerificationUri,
+      headers: headers,
+      body: jsonEncode({'phone': phoneE164, 'code': code}),
+    );
+    if (res.statusCode >= 400) {
+      final body = res.body.isNotEmpty ? jsonDecode(res.body) : null;
+      throw Exception(body?['error'] ?? 'Failed to check verification');
+    }
+    final body = jsonDecode(res.body);
+    return body['status'] == 'approved';
+  }
+
+  Future<String?> _promptForOtp(String phone) async {
+    final ctrl = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Verify contact'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Enter the OTP sent to $phone'),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: ctrl,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  decoration: const InputDecoration(hintText: '6-digit OTP'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(null),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () async {
+                  try {
+                    await _startVerification(phone);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('OTP resent')),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Resend failed: $e')),
+                      );
+                    }
+                  }
+                },
+                child: const Text('Resend'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final code = ctrl.text.trim();
+                  Navigator.of(ctx).pop(code.isEmpty ? null : code);
+                },
+                child: const Text('Verify'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  // --------------- Add Contact ---------------
+
   void _addContact() async {
     if (_nameController.text.isEmpty || _phoneController.text.isEmpty) return;
 
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('emergency_contacts')
-        .add({
-          'name': _nameController.text.trim(),
-          'phone': _phoneController.text.trim(),
-          'relation': _relationController.text.trim(),
-          'timestamp': FieldValue.serverTimestamp(),
-        });
+    // Normalize phone to E.164 (auto +91 for 10 digits)
+    final phoneE164 = _toE164IndiaIfNeeded(_phoneController.text);
+    if (!_looksLikeE164(phoneE164)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Phone must be E.164, e.g. +919876543210'),
+        ),
+      );
+      return;
+    }
 
-    _nameController.clear();
-    _phoneController.clear();
-    _relationController.clear();
+    setState(() => _busy = true);
+
+    try {
+      // 1) Send OTP
+      await _startVerification(phoneE164);
+
+      // 2) Prompt for OTP
+      final code = await _promptForOtp(phoneE164);
+      if (code == null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Verification canceled')));
+        setState(() => _busy = false);
+        return;
+      }
+
+      // 3) Verify OTP with function
+      final ok = await _checkVerification(phoneE164, code);
+      if (!ok) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Incorrect or expired code')),
+        );
+        setState(() => _busy = false);
+        return;
+      }
+
+      // 4) Save contact as verified = true
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('emergency_contacts')
+          .add({
+            'name': _nameController.text.trim(),
+            'phone': phoneE164,
+            'relation': _relationController.text.trim(),
+            'verified': true,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+
+      _nameController.clear();
+      _phoneController.clear();
+      _relationController.clear();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Contact added & verified')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   void _deleteContact(String docId) async {
@@ -41,6 +222,8 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
         .doc(docId)
         .delete();
   }
+
+  // --------------- UI (unchanged) ---------------
 
   @override
   Widget build(BuildContext context) {
@@ -108,10 +291,10 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
-                        onPressed: _addContact,
+                        onPressed: _busy ? null : _addContact,
                         icon: Icon(Icons.add, color: Colors.white),
                         label: Text(
-                          "Add Contact",
+                          _busy ? "Please wait…" : "Add Contact",
                           style: TextStyle(color: Colors.white),
                         ),
                         style: ElevatedButton.styleFrom(
