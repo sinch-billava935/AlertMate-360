@@ -28,7 +28,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Reset Password"),
+        title: Text("Reset Password", style: TextStyle(color: Colors.white)),
         backgroundColor: Color(0xFF003366),
         centerTitle: true,
       ),
@@ -64,10 +64,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
+                  backgroundColor: Color(0xFF0055A4),
                   minimumSize: Size(double.infinity, 48),
                 ),
-                child: Text("Send Reset Link"),
+                child: Text(
+                  "Send Reset Link",
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
               SizedBox(height: 20),
               if (_emailSent)

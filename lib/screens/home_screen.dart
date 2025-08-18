@@ -107,6 +107,7 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             tooltip: 'Account',
             icon: const Icon(Icons.account_circle_outlined),
+            color: Colors.white,
             onPressed: () {
               Navigator.push(
                 context,

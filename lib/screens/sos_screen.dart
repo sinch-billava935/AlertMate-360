@@ -48,7 +48,7 @@ class _SosScreenState extends State<SosScreen> {
     final loc = await _getLocation();
 
     final sosData = {
-      'userName': userName, // ✅ Add user name
+      'userName': userName,
       'timestamp': FieldValue.serverTimestamp(),
       'latitude': loc['latitude'],
       'longitude': loc['longitude'],
@@ -114,7 +114,10 @@ class _SosScreenState extends State<SosScreen> {
                     );
                   }
                 },
-                child: const Text("Yes, Trigger"),
+                child: const Text(
+                  "Yes, Trigger",
+                  style: TextStyle(color: Colors.white), // ✅ white text
+                ),
               ),
             ],
           ),
@@ -126,8 +129,11 @@ class _SosScreenState extends State<SosScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF5F5),
       appBar: AppBar(
-        title: const Text("SOS Alert"),
+        title: const Text("SOS Alert", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.redAccent,
+        iconTheme: const IconThemeData(
+          color: Colors.white,
+        ), // ✅ white back arrow
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -159,11 +165,15 @@ class _SosScreenState extends State<SosScreen> {
                           color: Colors.white,
                         ),
                       )
-                      : const Icon(Icons.emergency),
+                      : const Icon(
+                        Icons.emergency,
+                        color: Colors.white,
+                      ), // ✅ white icon
               label: Text(
                 isLoading
                     ? "Sending..."
                     : (sosTriggered ? "Please Wait..." : "Trigger SOS"),
+                style: const TextStyle(color: Colors.white), // ✅ white text
               ),
               onPressed: (sosTriggered || isLoading) ? null : _triggerSos,
               style: ElevatedButton.styleFrom(
