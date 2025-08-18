@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:location/location.dart';
+import 'alert_history_screen.dart';
 
 class SosScreen extends StatefulWidget {
   @override
@@ -30,7 +31,7 @@ class _SosScreenState extends State<SosScreen> {
     return {'latitude': locData.latitude, 'longitude': locData.longitude};
   }
 
-  /// Send SOS data to Firestore (Triggers Cloud Function)
+  /// Send SOS data to Firestore (Triggers Cloud Function + History)
   Future<void> _sendSosToFirestore() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw Exception("User not logged in");
@@ -54,6 +55,7 @@ class _SosScreenState extends State<SosScreen> {
       'longitude': loc['longitude'],
     };
 
+    // ✅ Save under user’s SOS history
     final sosRef = await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
@@ -98,9 +100,24 @@ class _SosScreenState extends State<SosScreen> {
                     });
 
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("🚨 SOS Alert Triggered Successfully!"),
+                      SnackBar(
+                        content: const Text(
+                          "🚨 SOS Alert Triggered Successfully!",
+                          style: TextStyle(color: Colors.white),
+                        ),
                         backgroundColor: Colors.redAccent,
+                        action: SnackBarAction(
+                          label: "View History",
+                          textColor: Colors.white,
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => AlertHistoryScreen(),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     );
                   } catch (e) {
@@ -131,9 +148,19 @@ class _SosScreenState extends State<SosScreen> {
       appBar: AppBar(
         title: const Text("SOS Alert", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.redAccent,
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ), // ✅ white back arrow
+        iconTheme: const IconThemeData(color: Colors.white), // ✅ white icons
+        actions: [
+          IconButton(
+            tooltip: "History",
+            icon: const Icon(Icons.history),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => AlertHistoryScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -165,10 +192,7 @@ class _SosScreenState extends State<SosScreen> {
                           color: Colors.white,
                         ),
                       )
-                      : const Icon(
-                        Icons.emergency,
-                        color: Colors.white,
-                      ), // ✅ white icon
+                      : const Icon(Icons.emergency, color: Colors.white),
               label: Text(
                 isLoading
                     ? "Sending..."
