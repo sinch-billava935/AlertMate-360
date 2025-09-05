@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:location/location.dart';
+
+import '../services/voice_trigger_service.dart';
 import 'alert_history_screen.dart';
 
 class SosScreen extends StatefulWidget {
@@ -13,15 +15,38 @@ class _SosScreenState extends State<SosScreen> {
   bool sosTriggered = false;
   bool isLoading = false;
 
-  /// Fetch current location (optional)
+  // 👇 Voice
+  final _voice = VoiceTriggerService();
+  bool _voiceReady = false;
+  bool _startingVoice = false;
+  final List<String> _keywords = [
+    'sos',
+    'help',
+    'help me',
+    'emergency',
+    'alert',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _initVoice();
+  }
+
+  Future<void> _initVoice() async {
+    final ok = await _voice.init();
+    if (mounted) setState(() => _voiceReady = ok);
+  }
+
+  /// Fetch current location
   Future<Map<String, double?>> _getLocation() async {
-    Location location = Location();
+    final location = Location();
 
     bool serviceEnabled = await location.serviceEnabled();
     if (!serviceEnabled) serviceEnabled = await location.requestService();
     if (!serviceEnabled) return {};
 
-    PermissionStatus permissionGranted = await location.hasPermission();
+    var permissionGranted = await location.hasPermission();
     if (permissionGranted == PermissionStatus.denied) {
       permissionGranted = await location.requestPermission();
     }
@@ -31,21 +56,20 @@ class _SosScreenState extends State<SosScreen> {
     return {'latitude': locData.latitude, 'longitude': locData.longitude};
   }
 
-  /// Send SOS data to Firestore (Triggers Cloud Function + History)
+  /// Send SOS data to Firestore
   Future<void> _sendSosToFirestore() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw Exception("User not logged in");
 
-    // Fetch user's name from Firestore
     final userDoc =
         await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .get();
 
-    final userName = userDoc.data()?['name'] ?? 'Unknown';
+    final data = userDoc.data() ?? {};
+    final userName = (data['username'] ?? data['name'] ?? 'Unknown').toString();
 
-    // Optionally include location
     final loc = await _getLocation();
 
     final sosData = {
@@ -53,20 +77,19 @@ class _SosScreenState extends State<SosScreen> {
       'timestamp': FieldValue.serverTimestamp(),
       'latitude': loc['latitude'],
       'longitude': loc['longitude'],
+      'triggeredBy': user.uid,
+      'triggerSource': 'voice_or_button',
     };
 
-    // ✅ Save under user’s SOS history
-    final sosRef = await FirebaseFirestore.instance
+    await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .collection('sos')
         .add(sosData);
-
-    print("🚨 SOS document created at path: ${sosRef.path}");
   }
 
-  /// Trigger SOS with confirmation dialog
-  void _triggerSos() {
+  /// Confirm + trigger
+  void _confirmAndTrigger() {
     showDialog(
       context: context,
       builder:
@@ -84,61 +107,119 @@ class _SosScreenState extends State<SosScreen> {
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
                 onPressed: () async {
                   Navigator.of(ctx).pop();
-                  setState(() => isLoading = true);
-
-                  try {
-                    await _sendSosToFirestore();
-
-                    setState(() {
-                      isLoading = false;
-                      sosTriggered = true;
-                    });
-
-                    // Disable the button for 5 seconds
-                    Future.delayed(const Duration(seconds: 5), () {
-                      if (mounted) setState(() => sosTriggered = false);
-                    });
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: const Text(
-                          "🚨 SOS Alert Triggered Successfully!",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        backgroundColor: Colors.redAccent,
-                        action: SnackBarAction(
-                          label: "View History",
-                          textColor: Colors.white,
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => AlertHistoryScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    );
-                  } catch (e) {
-                    setState(() => isLoading = false);
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("⚠️ Failed to send SOS alert: $e"),
-                        backgroundColor: Colors.redAccent,
-                      ),
-                    );
-                  }
+                  await _performTrigger();
                 },
                 child: const Text(
                   "Yes, Trigger",
-                  style: TextStyle(color: Colors.white), // ✅ white text
+                  style: TextStyle(color: Colors.white),
                 ),
               ),
             ],
           ),
     );
+  }
+
+  Future<void> _performTrigger() async {
+    setState(() => isLoading = true);
+    try {
+      await _sendSosToFirestore();
+
+      if (!mounted) return;
+      setState(() {
+        isLoading = false;
+        sosTriggered = true;
+      });
+
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted) setState(() => sosTriggered = false);
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              "🚨 SOS Alert Triggered Successfully!",
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Colors.redAccent,
+            action: SnackBarAction(
+              label: "View History",
+              textColor: Colors.white,
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AlertHistoryScreen()),
+                );
+              },
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("⚠️ Failed to send SOS alert: $e"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
+
+  /// Voice listening flow
+  Future<void> _startVoiceListening() async {
+    if (_startingVoice || !_voiceReady) return;
+
+    setState(() => _startingVoice = true);
+
+    if (!_voice.isAvailable) {
+      final ok = await _voice.init();
+      if (!ok) {
+        setState(() => _startingVoice = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Speech recognition not available on this device."),
+          ),
+        );
+        return;
+      }
+    }
+
+    await _voice.startListening(
+      listenFor: const Duration(seconds: 8),
+      onFinalResult: (finalText) async {
+        setState(() => _startingVoice = false);
+        if (finalText.trim().isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Didn't catch that. Try saying: 'SOS' or 'Help me'.",
+              ),
+            ),
+          );
+          return;
+        }
+
+        if (_voice.matchesTrigger(finalText, _keywords)) {
+          await _performTrigger();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                "Heard: \"$finalText\" — no trigger word detected.",
+              ),
+            ),
+          );
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _voice.stop();
+    super.dispose();
   }
 
   @override
@@ -148,7 +229,7 @@ class _SosScreenState extends State<SosScreen> {
       appBar: AppBar(
         title: const Text("SOS Alert", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.redAccent,
-        iconTheme: const IconThemeData(color: Colors.white), // ✅ white icons
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
             tooltip: "History",
@@ -156,7 +237,7 @@ class _SosScreenState extends State<SosScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => AlertHistoryScreen()),
+                MaterialPageRoute(builder: (_) => const AlertHistoryScreen()),
               );
             },
           ),
@@ -176,11 +257,13 @@ class _SosScreenState extends State<SosScreen> {
             Text(
               sosTriggered
                   ? "Please wait... You can trigger another SOS after a few seconds."
-                  : "Tap the button below to send an emergency alert.",
+                  : "Tap the button below or use voice ('SOS', 'Help me') to send an emergency alert.",
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 40),
+
+            // Trigger SOS button
             ElevatedButton.icon(
               icon:
                   isLoading
@@ -197,9 +280,10 @@ class _SosScreenState extends State<SosScreen> {
                 isLoading
                     ? "Sending..."
                     : (sosTriggered ? "Please Wait..." : "Trigger SOS"),
-                style: const TextStyle(color: Colors.white), // ✅ white text
+                style: const TextStyle(color: Colors.white),
               ),
-              onPressed: (sosTriggered || isLoading) ? null : _triggerSos,
+              onPressed:
+                  (sosTriggered || isLoading) ? null : _confirmAndTrigger,
               style: ElevatedButton.styleFrom(
                 backgroundColor:
                     (sosTriggered || isLoading) ? Colors.grey : Colors.red,
@@ -210,16 +294,29 @@ class _SosScreenState extends State<SosScreen> {
                 textStyle: const TextStyle(fontSize: 18),
               ),
             ),
-            const SizedBox(height: 40),
-            if (sosTriggered)
-              const Text(
-                "⏳ Button re-enabled in 5 seconds...",
-                style: TextStyle(
-                  color: Colors.orange,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                ),
+
+            const SizedBox(height: 20),
+
+            // Voice SOS button (now below Trigger SOS)
+            ElevatedButton.icon(
+              icon: const Icon(Icons.mic, color: Colors.white),
+              label: Text(
+                _startingVoice ? "Listening..." : "Voice SOS",
+                style: const TextStyle(color: Colors.white),
               ),
+              onPressed:
+                  (_startingVoice || isLoading) ? null : _startVoiceListening,
+              style: ElevatedButton.styleFrom(
+                backgroundColor:
+                    _startingVoice ? Colors.grey : Colors.redAccent,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 20,
+                ),
+                textStyle: const TextStyle(fontSize: 18),
+              ),
+            ),
+
             const Spacer(),
             const Text(
               "Stay calm. You're not alone.",
