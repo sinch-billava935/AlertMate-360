@@ -1,83 +1,101 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import '../services/health_service.dart';
+import '../models/health_data.dart';
 
 class HealthStatsScreen extends StatelessWidget {
-  // Temporary mock values – replace later with real-time data
-  final int heartRate = 76;
-  final int spo2 = 97;
-  final double temperature = 36.8;
+  HealthStatsScreen({super.key});
+
+  final HealthService healthService = HealthService(app: Firebase.app());
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Health Stats", style: TextStyle(color: Colors.white)),
-        backgroundColor: Color.fromARGB(255, 62, 130, 198),
-      ),
-      backgroundColor: Color(0xFFF2F7FF), // Light background
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            SizedBox(height: 20),
-            Text(
-              "Your Health Summary",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 30),
-
-            // Heart Rate Card
-            _buildStatCard(
-              context,
-              title: "Heart Rate",
-              value: "$heartRate bpm",
-              icon: Icons.favorite,
-              iconColor: Colors.red,
-            ),
-
-            // SpO2 Card
-            _buildStatCard(
-              context,
-              title: "SpO₂ Level",
-              value: "$spo2%",
-              icon: Icons.bloodtype,
-              iconColor: Colors.blue,
-            ),
-
-            // Temperature Card
-            _buildStatCard(
-              context,
-              title: "Body Temperature",
-              value: "$temperature °C",
-              icon: Icons.thermostat_rounded,
-              iconColor: Colors.orange,
-            ),
-
-            Spacer(),
-            Text(
-              "Monitor your vitals regularly",
-              style: TextStyle(color: Colors.black54),
-            ),
-          ],
+        title: const Text(
+          "Health Stats",
+          style: TextStyle(color: Colors.white),
         ),
+        backgroundColor: const Color.fromARGB(255, 62, 130, 198),
+      ),
+      body: StreamBuilder<HealthData?>(
+        stream: healthService.getHealthDataStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data == null) {
+            return const Center(child: Text('No data available'));
+          }
+
+          final data = snapshot.data!;
+
+          // Function to color-code values
+          Color getHeartRateColor(double hr) =>
+              (hr < 60 || hr > 100) ? Colors.red : Colors.green;
+          Color getSpO2Color(double spo2) =>
+              (spo2 < 95) ? Colors.red : Colors.green;
+          Color getTempColor(double temp) =>
+              (temp < 36 || temp > 37.5) ? Colors.red : Colors.green;
+          Color getHumidityColor(double hum) =>
+              (hum < 30 || hum > 60) ? Colors.orange : Colors.green;
+
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildIndicator(
+                  label: "❤ Heart Rate",
+                  value: "${data.heartRate} bpm",
+                  color: getHeartRateColor(data.heartRate),
+                ),
+                _buildIndicator(
+                  label: "🩸 SpO2",
+                  value: "${data.spo2} %",
+                  color: getSpO2Color(data.spo2),
+                ),
+                _buildIndicator(
+                  label: "🌡 Temperature",
+                  value: "${data.temperature} °C",
+                  color: getTempColor(data.temperature),
+                ),
+                _buildIndicator(
+                  label: "💧 Humidity",
+                  value: "${data.humidity} %",
+                  color: getHumidityColor(data.humidity),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  "Last Updated: ${DateTime.fromMillisecondsSinceEpoch(data.timestamp)}",
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildStatCard(
-    BuildContext context, {
-    required String title,
+  // Helper widget for colored indicator
+  Widget _buildIndicator({
+    required String label,
     required String value,
-    required IconData icon,
-    required Color iconColor,
+    required Color color,
   }) {
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: EdgeInsets.symmetric(vertical: 12),
-      elevation: 4,
+      margin: const EdgeInsets.symmetric(vertical: 8),
       child: ListTile(
-        leading: Icon(icon, size: 36, color: iconColor),
-        title: Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(value, style: TextStyle(fontSize: 18)),
+        title: Text(label, style: const TextStyle(fontSize: 18)),
+        trailing: Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
       ),
     );
   }

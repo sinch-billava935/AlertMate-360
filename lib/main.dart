@@ -10,7 +10,14 @@ import 'voice/porcupine_test_screen.dart'; // import the test screen
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Only initialize Firebase if it's not already initialized
+  if (Firebase.apps.isEmpty) {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  }
+
   runApp(const AlertMateApp());
 }
 
@@ -19,23 +26,6 @@ class AlertMateApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // return MaterialApp(
-    //   title: 'AlertMate 360',
-    //   theme: ThemeData(
-    //     useMaterial3: true,
-    //     colorSchemeSeed: Colors.red,
-    //     visualDensity: VisualDensity.adaptivePlatformDensity,
-    //   ),
-    //   debugShowCheckedModeBanner: false,
-    //   initialRoute: '/',
-    //   routes: {
-    //     '/': (context) => SplashScreen(),
-    //     '/login': (context) => LoginScreen(),
-    //     '/home': (context) => HomeScreen(),
-    //     '/account': (context) => AccountDetailsScreen(),
-    //   },
-    // );
-
     return MaterialApp(
       title: 'AlertMate 360',
       theme: ThemeData(primarySwatch: Colors.blue),
