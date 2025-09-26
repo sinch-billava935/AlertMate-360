@@ -18,12 +18,12 @@ const twilio = require("twilio");
 // these credentials as soon as possible and consider moving them to
 // functions config.
 const TWILIO_ACCOUNT_SID =
-  "AC2d3eb3ca9ae08c106a4be004c97dde23";
+  "";
 const TWILIO_AUTH_TOKEN =
-  "76244fe77203266831bf4fbecc9d34d3";
+  "";
 const TWILIO_VERIFY_SERVICE_SID =
-  "VA4b642d69fe4a869fb4b855a453581250";
-const TWILIO_FROM = "+15072257979";
+  "";
+const TWILIO_FROM = "";
 
 const twilioClient = twilio(
     TWILIO_ACCOUNT_SID,
