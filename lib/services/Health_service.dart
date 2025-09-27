@@ -13,7 +13,7 @@ class HealthService {
       FirebaseDatabase.instanceFor(
         app: app,
         databaseURL:
-            "https://alertmatefb-a1c17-default-rtdb.asia-southeast1.firebasedatabase.app",
+            "",
       ).ref();
 
   final _auth = FirebaseAuth.instance;
