@@ -36,8 +36,10 @@ class HealthStatsScreen extends StatelessWidget {
               (hr < 60 || hr > 100) ? Colors.red : Colors.green;
           Color getSpO2Color(double spo2) =>
               (spo2 < 95) ? Colors.red : Colors.green;
-          Color getTempColor(double temp) =>
-              (temp < 36 || temp > 37.5) ? Colors.red : Colors.green;
+          Color getEnvTempColor(double temp) =>
+              (temp < 18 || temp > 35) ? Colors.red : Colors.green;
+          Color getHumanTempColor(double temp) =>
+              (temp < 97 || temp > 99.5) ? Colors.red : Colors.green; // in °F
           Color getHumidityColor(double hum) =>
               (hum < 30 || hum > 60) ? Colors.orange : Colors.green;
 
@@ -56,9 +58,14 @@ class HealthStatsScreen extends StatelessWidget {
                   color: getSpO2Color(data.spo2),
                 ),
                 _buildIndicator(
-                  label: "🌡 Temperature",
-                  value: "${data.temperature} °C",
-                  color: getTempColor(data.temperature),
+                  label: "🌡 Environment Temp",
+                  value: "${data.environmentTemperatureC} °C",
+                  color: getEnvTempColor(data.environmentTemperatureC),
+                ),
+                _buildIndicator(
+                  label: "🌡 Human Temp",
+                  value: "${data.humanTemperatureF} °F",
+                  color: getHumanTempColor(data.humanTemperatureF),
                 ),
                 _buildIndicator(
                   label: "💧 Humidity",

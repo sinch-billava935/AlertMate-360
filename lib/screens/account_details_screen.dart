@@ -7,8 +7,7 @@ class AccountDetailsScreen extends StatefulWidget {
   final String? uid; // optional, useful for admin views
   final Future<void> Function(String)? onUsernameChanged;
 
-  const AccountDetailsScreen({Key? key, this.uid, this.onUsernameChanged})
-    : super(key: key);
+  const AccountDetailsScreen({super.key, this.uid, this.onUsernameChanged});
 
   @override
   State<AccountDetailsScreen> createState() => _AccountDetailsScreenState();
@@ -77,8 +76,9 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                   hintText: 'Enter a display name',
                 ),
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty)
+                  if (value == null || value.trim().isEmpty) {
                     return 'Username cannot be empty';
+                  }
                   if (value.trim().length < 3) return 'Minimum 3 characters';
                   return null;
                 },
@@ -243,10 +243,11 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                                       onPressed: () async {
                                         Navigator.of(c).pop();
                                         await FirebaseAuth.instance.signOut();
-                                        if (mounted)
+                                        if (mounted) {
                                           Navigator.of(
                                             context,
                                           ).pushReplacementNamed('/login');
+                                        }
                                       },
                                       child: const Text('SIGN OUT'),
                                     ),

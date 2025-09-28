@@ -7,10 +7,10 @@ class SettingsScreen extends StatefulWidget {
   final Function(bool) onVoiceTriggerChanged;
 
   const SettingsScreen({
-    Key? key,
+    super.key,
     required this.initialVoiceTriggerState,
     required this.onVoiceTriggerChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();

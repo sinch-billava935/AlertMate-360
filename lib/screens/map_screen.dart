@@ -1,92 +1,79 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:location/location.dart';
+import 'package:firebase_core/firebase_core.dart';
+import '../services/health_service.dart';
+import '../models/health_data.dart';
 
-class MapScreen extends StatefulWidget {
-  @override
-  _MapScreenState createState() => _MapScreenState();
-}
+class MapScreen extends StatelessWidget {
+  MapScreen({super.key});
 
-class _MapScreenState extends State<MapScreen> {
-  GoogleMapController? mapController;
-  LatLng? _currentLocation;
-  bool _isLoading = true; // Add a loading state
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchLocation();
-  }
-
-  Future<void> _fetchLocation() async {
-    final location = Location();
-    bool serviceEnabled = await location.serviceEnabled();
-    if (!serviceEnabled) {
-      serviceEnabled = await location.requestService();
-      if (!serviceEnabled) {
-        setState(() {
-          _isLoading = false; // Location services not enabled
-        });
-        return;
-      }
-    }
-
-    PermissionStatus permissionGranted = await location.hasPermission();
-    if (permissionGranted == PermissionStatus.denied) {
-      permissionGranted = await location.requestPermission();
-      if (permissionGranted != PermissionStatus.granted) {
-        setState(() {
-          _isLoading = false; // Location permission denied
-        });
-        return;
-      }
-    }
-
-    try {
-      final userLocation = await location.getLocation();
-      setState(() {
-        _currentLocation = LatLng(
-          userLocation.latitude!,
-          userLocation.longitude!,
-        );
-        _isLoading = false; // Location fetched successfully
-      });
-    } catch (e) {
-      print("Error fetching location: $e");
-      setState(() {
-        _isLoading = false; // Error during location fetch
-      });
-    }
-  }
+  final HealthService healthService = HealthService(app: Firebase.app());
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Your Location"),
+        title: const Text(
+          "Location Stats",
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.green,
       ),
-      body:
-          _isLoading
-              ? Center(child: CircularProgressIndicator())
-              : _currentLocation == null
-              ? Center(child: Text("Could not retrieve location."))
-              : GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: _currentLocation!,
-                  zoom: 15,
+      body: StreamBuilder<HealthData?>(
+        stream: healthService.getHealthDataStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data == null) {
+            return const Center(child: Text("No location data available"));
+          }
+
+          final data = snapshot.data!;
+
+          return Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildIndicator(
+                  label: "📍 Latitude",
+                  value: "${data.latitude}",
                 ),
-                markers: {
-                  Marker(
-                    markerId: MarkerId("current"),
-                    position: _currentLocation!,
-                    infoWindow: InfoWindow(title: "You are here"),
-                  ),
-                },
-                onMapCreated: (controller) {
-                  mapController = controller;
-                },
-              ),
+                _buildIndicator(
+                  label: "📍 Longitude",
+                  value: "${data.longitude}",
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  "Last Updated: ${DateTime.fromMillisecondsSinceEpoch(data.timestamp)}",
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // Reusable card for displaying info
+  Widget _buildIndicator({
+    required String label,
+    required String value,
+  }) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: ListTile(
+        title: Text(label, style: const TextStyle(fontSize: 18)),
+        trailing: Text(
+          value,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.blue,
+          ),
+        ),
+      ),
     );
   }
 }

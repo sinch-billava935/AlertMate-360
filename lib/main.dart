@@ -2,10 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart'; // auto-generated
 import 'package:flutter/material.dart';
 
-import 'screens/splash_screen.dart';
-import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
-import 'screens/account_details_screen.dart';
 import 'voice/porcupine_test_screen.dart'; // import the test screen
 
 void main() async {

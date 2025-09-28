@@ -7,6 +7,8 @@ import '../services/voice_trigger_service.dart';
 import 'alert_history_screen.dart';
 
 class SosScreen extends StatefulWidget {
+  const SosScreen({super.key});
+
   @override
   _SosScreenState createState() => _SosScreenState();
 }
