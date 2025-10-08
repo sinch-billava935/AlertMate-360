@@ -8,8 +8,6 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
 
-
-
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
@@ -42,6 +40,9 @@
             </intent-filter>
         </activity>
         <!-- ✅ Add Google Maps API key here -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id"
+           android:value="alert_channel" />
+
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyBH1z0znvqOyDE0z1gs-8lpJdfNDTMlKLU"/>

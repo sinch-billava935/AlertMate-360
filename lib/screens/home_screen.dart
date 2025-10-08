@@ -11,6 +11,7 @@ import 'account_details_screen.dart';
 import 'settings_screen.dart';
 import '../services/speech_detection_service.dart';
 import '../services/settings_service.dart';
+import '../services/notification_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -44,6 +45,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _email = _user?.email ?? 'no-email@example.com';
     _subscribeToUserDoc();
     _loadVoiceTriggerSetting();
+
+    // ✅ Initialize FCM notification service
+    // NotificationService.init();
+    Future.microtask(() => NotificationService.init());
   }
 
   @override
@@ -209,6 +214,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _signOut() async {
     await _stopVoiceTrigger();
+
+    // // remove token from DB before signing out
+    // final uid = _auth.currentUser?.uid;
+    // if (uid != null) {
+    //   await NotificationService.removeFcmTokenFromDatabase(uid);
+    // }
+
     await FirebaseAuth.instance.signOut();
     if (mounted) {
       Navigator.pushReplacement(

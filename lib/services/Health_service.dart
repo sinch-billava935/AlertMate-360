@@ -10,8 +10,9 @@ class HealthService {
 
   late final DatabaseReference _db =
       FirebaseDatabase.instanceFor(
-        app: app,
-        databaseURL: "https://alertmatefb-a1c17-default-rtdb.asia-southeast1.firebasedatabase.app",
+        app: Firebase.app(),
+        databaseURL:
+            "https://alertmatefb-a1c17-default-rtdb.asia-southeast1.firebasedatabase.app",
       ).ref();
 
   final _auth = FirebaseAuth.instance;
@@ -33,15 +34,16 @@ class HealthService {
       final data = Map<String, dynamic>.from(snapshot.value as Map);
 
       return HealthData(
-  heartRate: (data["heartRate"] ?? 0).toDouble(),
-  spo2: (data["spo2"] ?? 0).toDouble(),
-  environmentTemperatureC: (data["environmentTemperature_C"] ?? 0).toDouble(),
-  humanTemperatureF: (data["humanTemperature_F"] ?? 0).toDouble(),
-  humidity: (data["humidity"] ?? 0).toDouble(),
-  latitude: (data["latitude"] ?? 0).toDouble(),
-  longitude: (data["longitude"] ?? 0).toDouble(),
-  timestamp: (data["timestamp"] ?? 0),
-);
+        heartRate: (data["heartRate"] ?? 0).toDouble(),
+        spo2: (data["spo2"] ?? 0).toDouble(),
+        environmentTemperatureC:
+            (data["environmentTemperature_C"] ?? 0).toDouble(),
+        humanTemperatureF: (data["humanTemperature_F"] ?? 0).toDouble(),
+        humidity: (data["humidity"] ?? 0).toDouble(),
+        latitude: (data["latitude"] ?? 0).toDouble(),
+        longitude: (data["longitude"] ?? 0).toDouble(),
+        timestamp: (data["timestamp"] ?? 0),
+      );
     });
   }
 }
