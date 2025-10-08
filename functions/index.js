@@ -15,10 +15,10 @@ const twilio = require("twilio");
 // You asked to place credentials in the code. This is insecure — rotate
 // these credentials as soon as possible and consider moving them to
 // functions config.
-const TWILIO_ACCOUNT_SID = "AC255ff2f2042879140f871be46070e349";
-const TWILIO_AUTH_TOKEN = "2706a0eb528284f8be11fa40dbecf86c";
-const TWILIO_VERIFY_SERVICE_SID = "VAad900122d52fb43a5e0eb80871981eda";
-const TWILIO_FROM = "+18152491053";
+const TWILIO_ACCOUNT_SID = "";
+const TWILIO_AUTH_TOKEN = "";
+const TWILIO_VERIFY_SERVICE_SID = "";
+const TWILIO_FROM = "";
 
 const twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
