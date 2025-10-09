@@ -42,7 +42,7 @@
         <!-- ✅ Add Google Maps API key here -->
         <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id"
            android:value="alert_channel" />
-
+        
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyBH1z0znvqOyDE0z1gs-8lpJdfNDTMlKLU"/>

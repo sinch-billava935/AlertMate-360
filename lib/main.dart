@@ -1,20 +1,20 @@
 // lib/main.dart
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart'; // already present
+import 'firebase_options.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'screens/home_screen.dart';
 import 'voice/porcupine_test_screen.dart';
 import 'services/notification_service.dart';
 
-// Top-level background message handler
+// ✅ Background FCM message handler — must be top-level
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Initialize Firebase for background isolate
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  // You can debug/log the message here
-  print('Handling a background message: ${message.messageId}');
-  // If needed, you can write to Realtime DB / Firestore here, but keep it small.
+  print('📩 Handling a background message: ${message.messageId}');
+  NotificationService.showNotification(
+    title: message.notification?.title ?? 'AlertMate 360',
+    body: message.notification?.body ?? 'You have a new alert',
+  );
 }
 
 void main() async {
@@ -26,8 +26,10 @@ void main() async {
     );
   }
 
-  await NotificationService.init(); // ✅ Call this once
-  // Register the background handler BEFORE runApp
+  // ✅ Initialize notification service (local + push)
+  await NotificationService.init();
+
+  // ✅ Register background handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   runApp(const AlertMateApp());

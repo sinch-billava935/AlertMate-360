@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'sos_screen.dart';
 import 'health_stats_screen.dart';
 import 'map_screen.dart';
@@ -41,14 +42,34 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
     _user = _auth.currentUser;
     _email = _user?.email ?? 'no-email@example.com';
     _subscribeToUserDoc();
     _loadVoiceTriggerSetting();
 
-    // ✅ Initialize FCM notification service
-    // NotificationService.init();
+    // ✅ Initialize Notification Listeners for foreground & onMessageOpenedApp
+    _setupNotificationListeners();
+
+    // ✅ Make sure local + push notifications are ready
     Future.microtask(() => NotificationService.init());
+  }
+
+  // 🧭 Setup FCM listeners for foreground & background
+  void _setupNotificationListeners() {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      print('🚨 Foreground message received: ${message.notification?.title}');
+      NotificationService.showNotification(
+        title: message.notification?.title ?? 'AlertMate 360',
+        body: message.notification?.body ?? 'You have a new alert',
+      );
+    });
+
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      print('📲 Notification tapped: ${message.data}');
+      // 👉 Example: navigate to SOS Screen if it's an emergency alert
+      Navigator.push(context, MaterialPageRoute(builder: (_) => SosScreen()));
+    });
   }
 
   @override
@@ -80,8 +101,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         final fromFs = (data?['username'] as String?)?.trim();
         setState(() {
           _username =
-              fromFs != null && fromFs.isNotEmpty
-                  ? fromFs
+              fromFs?.isNotEmpty == true
+                  ? fromFs!
                   : (_auth.currentUser?.displayName ?? 'User');
           _email = _auth.currentUser?.email ?? _email;
           _loading = false;
@@ -152,15 +173,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _onHelpDetected() {
-    // Show confirmation
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("Detected 'help' - Triggering SOS"),
         duration: Duration(seconds: 2),
       ),
     );
-
-    // Trigger SOS flow
     Navigator.push(context, MaterialPageRoute(builder: (_) => SosScreen()));
   }
 
@@ -173,9 +191,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
 
-    // Auto-restart on error
     if (_voiceTriggerEnabled) {
-      Future.delayed(Duration(seconds: 2), _startVoiceTrigger);
+      Future.delayed(const Duration(seconds: 2), _startVoiceTrigger);
     }
   }
 
@@ -214,13 +231,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _signOut() async {
     await _stopVoiceTrigger();
-
-    // // remove token from DB before signing out
-    // final uid = _auth.currentUser?.uid;
-    // if (uid != null) {
-    //   await NotificationService.removeFcmTokenFromDatabase(uid);
-    // }
-
     await FirebaseAuth.instance.signOut();
     if (mounted) {
       Navigator.pushReplacement(
@@ -304,7 +314,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     const SizedBox(height: 30),
 
-                    // Voice Trigger Status and Feedback
                     if (_voiceTriggerEnabled)
                       Column(
                         children: [
@@ -317,7 +326,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               color: Colors.green.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Row(
+                            child: const Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Icon(Icons.mic, color: Colors.green, size: 16),
@@ -329,7 +338,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               ],
                             ),
                           ),
-                          SizedBox(height: 10),
+                          const SizedBox(height: 10),
                           if (_speechStatus.isNotEmpty)
                             Text(
                               _speechStatus,
@@ -452,7 +461,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
                     const Spacer(),
 
-                    // Logout Button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
