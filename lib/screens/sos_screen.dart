@@ -2,22 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:location/location.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../services/voice_trigger_service.dart';
 import 'alert_history_screen.dart';
+import 'health_stats_screen.dart';
+import 'map_screen.dart';
+import 'emergency_contacts_screen.dart';
 
 class SosScreen extends StatefulWidget {
   const SosScreen({super.key});
 
   @override
-  _SosScreenState createState() => _SosScreenState();
+  State<SosScreen> createState() => _SosScreenState();
 }
 
 class _SosScreenState extends State<SosScreen> {
   bool sosTriggered = false;
   bool isLoading = false;
 
-  // 👇 Voice
   final _voice = VoiceTriggerService();
   bool _voiceReady = false;
   bool _startingVoice = false;
@@ -28,6 +31,8 @@ class _SosScreenState extends State<SosScreen> {
     'emergency',
     'alert',
   ];
+
+  int _selectedIndex = 0; // Trigger SOS tab default
 
   @override
   void initState() {
@@ -40,10 +45,8 @@ class _SosScreenState extends State<SosScreen> {
     if (mounted) setState(() => _voiceReady = ok);
   }
 
-  /// Fetch current location
   Future<Map<String, double?>> _getLocation() async {
     final location = Location();
-
     bool serviceEnabled = await location.serviceEnabled();
     if (!serviceEnabled) serviceEnabled = await location.requestService();
     if (!serviceEnabled) return {};
@@ -58,7 +61,6 @@ class _SosScreenState extends State<SosScreen> {
     return {'latitude': locData.latitude, 'longitude': locData.longitude};
   }
 
-  /// Send SOS data to Firestore
   Future<void> _sendSosToFirestore() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw Exception("User not logged in");
@@ -68,10 +70,8 @@ class _SosScreenState extends State<SosScreen> {
             .collection('users')
             .doc(user.uid)
             .get();
-
     final data = userDoc.data() ?? {};
     final userName = (data['username'] ?? data['name'] ?? 'Unknown').toString();
-
     final loc = await _getLocation();
 
     final sosData = {
@@ -90,7 +90,6 @@ class _SosScreenState extends State<SosScreen> {
         .add(sosData);
   }
 
-  /// Confirm + trigger
   void _confirmAndTrigger() {
     showDialog(
       context: context,
@@ -106,7 +105,9 @@ class _SosScreenState extends State<SosScreen> {
                 child: const Text("Cancel"),
               ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                ),
                 onPressed: () async {
                   Navigator.of(ctx).pop();
                   await _performTrigger();
@@ -125,8 +126,8 @@ class _SosScreenState extends State<SosScreen> {
     setState(() => isLoading = true);
     try {
       await _sendSosToFirestore();
-
       if (!mounted) return;
+
       setState(() {
         isLoading = false;
         sosTriggered = true;
@@ -136,27 +137,22 @@ class _SosScreenState extends State<SosScreen> {
         if (mounted) setState(() => sosTriggered = false);
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              "🚨 SOS Alert Triggered Successfully!",
-              style: TextStyle(color: Colors.white),
-            ),
-            backgroundColor: Colors.redAccent,
-            action: SnackBarAction(
-              label: "View History",
-              textColor: Colors.white,
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AlertHistoryScreen()),
-                );
-              },
-            ),
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text("🚨 SOS Alert Triggered Successfully!"),
+          backgroundColor: Colors.redAccent,
+          action: SnackBarAction(
+            label: "View History",
+            textColor: Colors.white,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AlertHistoryScreen()),
+              );
+            },
           ),
-        );
-      }
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() => isLoading = false);
@@ -169,7 +165,6 @@ class _SosScreenState extends State<SosScreen> {
     }
   }
 
-  /// Voice listening flow
   Future<void> _startVoiceListening() async {
     if (_startingVoice || !_voiceReady) return;
 
@@ -196,7 +191,7 @@ class _SosScreenState extends State<SosScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                "Didn't catch that. Try saying: 'SOS' or 'Help me'.",
+                "Didn't catch that. Try saying 'SOS' or 'Help me'.",
               ),
             ),
           );
@@ -226,11 +221,23 @@ class _SosScreenState extends State<SosScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const Color accentColor = Color(0xFF3E82C6);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF5F5),
+      backgroundColor:
+          isDark ? const Color(0xFF0E1117) : const Color(0xFFF4F6FB),
       appBar: AppBar(
-        title: const Text("SOS Alert", style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.redAccent,
+        backgroundColor: accentColor,
+        elevation: 0,
+        centerTitle: true,
+        title: Text(
+          "Trigger SOS",
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
@@ -245,86 +252,167 @@ class _SosScreenState extends State<SosScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            const SizedBox(height: 30),
-            const Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.red,
-              size: 90,
-            ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
+            Image.asset('assets/logo/new_shield.png', width: 100, height: 100),
+            const SizedBox(height: 16),
             Text(
-              sosTriggered
-                  ? "Please wait... You can trigger another SOS after a few seconds."
-                  : "Tap the button below or use voice ('SOS', 'Help me') to send an emergency alert.",
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+              "Emergency SOS Trigger",
+              style: GoogleFonts.poppins(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: accentColor,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              "Tap the button or say 'SOS' to send an emergency alert.",
               textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(fontSize: 14, color: Colors.black54),
+            ),
+            const SizedBox(height: 30),
+            _buildFeatureButton(
+              icon: Icons.warning_rounded,
+              color: Colors.redAccent,
+              label: isLoading ? "Sending..." : "TRIGGER SOS",
+              onTap: (sosTriggered || isLoading) ? null : _confirmAndTrigger,
+            ),
+            const SizedBox(height: 16),
+            _buildFeatureButton(
+              icon: Icons.mic,
+              color: accentColor,
+              label: _startingVoice ? "Listening..." : "VOICE SOS",
+              onTap:
+                  (_startingVoice || isLoading) ? null : _startVoiceListening,
+            ),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: BoxDecoration(
+                color: accentColor.withOpacity(0.07),
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Center(
+                child: Text(
+                  sosTriggered
+                      ? "🚨 SOS Alert Triggered! Stay calm. Help is on the way."
+                      : "Stay calm. Help is on the way.",
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: sosTriggered ? Colors.redAccent : Colors.black54,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             ),
             const SizedBox(height: 40),
-
-            // Trigger SOS button
-            ElevatedButton.icon(
-              icon:
-                  isLoading
-                      ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                      : const Icon(Icons.emergency, color: Colors.white),
-              label: Text(
-                isLoading
-                    ? "Sending..."
-                    : (sosTriggered ? "Please Wait..." : "Trigger SOS"),
-                style: const TextStyle(color: Colors.white),
+          ],
+        ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: accentColor,
+        unselectedItemColor: Colors.black54,
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() => _selectedIndex = index);
+          if (index == 0) {
+            // already here
+          } else if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const HealthStatsScreen()),
+            );
+          } else if (index == 2) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => MapScreen()),
+            );
+          } else if (index == 3) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const EmergencyContactsScreen(),
               ),
-              onPressed:
-                  (sosTriggered || isLoading) ? null : _confirmAndTrigger,
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    (sosTriggered || isLoading) ? Colors.grey : Colors.red,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 40,
-                  vertical: 20,
-                ),
-                textStyle: const TextStyle(fontSize: 18),
-              ),
-            ),
+            );
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.warning_amber_rounded),
+            label: "Trigger SOS",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.monitor_heart),
+            label: "Health",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.map_rounded),
+            label: "Map View",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.contacts_rounded),
+            label: "Contacts",
+          ),
+        ],
+      ),
+    );
+  }
 
-            const SizedBox(height: 20),
-
-            // Voice SOS button (now below Trigger SOS)
-            ElevatedButton.icon(
-              icon: const Icon(Icons.mic, color: Colors.white),
-              label: Text(
-                _startingVoice ? "Listening..." : "Voice SOS",
-                style: const TextStyle(color: Colors.white),
-              ),
-              onPressed:
-                  (_startingVoice || isLoading) ? null : _startVoiceListening,
-              style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    _startingVoice ? Colors.grey : Colors.redAccent,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 40,
-                  vertical: 20,
-                ),
-                textStyle: const TextStyle(fontSize: 18),
-              ),
-            ),
-
-            const Spacer(),
-            const Text(
-              "Stay calm. You're not alone.",
-              style: TextStyle(color: Colors.black54, fontSize: 14),
+  Widget _buildFeatureButton({
+    required IconData icon,
+    required Color color,
+    required String label,
+    required VoidCallback? onTap,
+  }) {
+    return AnimatedOpacity(
+      opacity: (onTap == null) ? 0.7 : 1,
+      duration: const Duration(milliseconds: 200),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [color.withOpacity(0.15), Colors.white],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
             ),
           ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(18),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 18),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, color: color, size: 26),
+                  const SizedBox(width: 18),
+                  Text(
+                    label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );

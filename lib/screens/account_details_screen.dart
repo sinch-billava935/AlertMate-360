@@ -1,10 +1,10 @@
-// lib/screens/account_details_screen.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AccountDetailsScreen extends StatefulWidget {
-  final String? uid; // optional, useful for admin views
+  final String? uid; // optional, for admin views
   final Future<void> Function(String)? onUsernameChanged;
 
   const AccountDetailsScreen({super.key, this.uid, this.onUsernameChanged});
@@ -30,16 +30,13 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     _loadUser();
   }
 
-  // LOAD: prefer FirebaseAuth.displayName (original username)
   Future<void> _loadUser() async {
     setState(() => _loading = true);
     try {
       final user = _auth.currentUser;
       _email = user?.email ?? 'no-email@example.com';
-      // Use displayName as the "original" username
       _username = user?.displayName?.trim() ?? 'User';
 
-      // If displayName missing, optionally read Firestore username
       final uid = _effectiveUid;
       if ((user?.displayName == null || user!.displayName!.trim().isEmpty) &&
           uid != null) {
@@ -64,7 +61,10 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
       barrierDismissible: true,
       builder:
           (context) => AlertDialog(
-            title: const Text('Edit username'),
+            title: Text(
+              'Edit username',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+            ),
             content: Form(
               key: formKey,
               child: TextFormField(
@@ -76,9 +76,8 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                   hintText: 'Enter a display name',
                 ),
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                  if (value == null || value.trim().isEmpty)
                     return 'Username cannot be empty';
-                  }
                   if (value.trim().length < 3) return 'Minimum 3 characters';
                   return null;
                 },
@@ -87,7 +86,10 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(null),
-                child: const Text('CANCEL'),
+                child: Text(
+                  'CANCEL',
+                  style: GoogleFonts.poppins(color: Colors.black87),
+                ),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -95,7 +97,10 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                     Navigator.of(context).pop(controller.text.trim());
                   }
                 },
-                child: const Text('SAVE'),
+                child: Text(
+                  'SAVE',
+                  style: GoogleFonts.poppins(color: Colors.white),
+                ),
               ),
             ],
           ),
@@ -106,7 +111,6 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     }
   }
 
-  // UPDATE: update FirebaseAuth.displayName (authoritative) and mirror to Firestore
   Future<void> _updateUsername(String newUsername) async {
     setState(() => _saving = true);
     final old = _username;
@@ -115,13 +119,10 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     try {
       final user = _auth.currentUser;
       if (user != null) {
-        // Update FirebaseAuth displayName (authoritative)
         await user.updateDisplayName(newUsername);
-        // reload to ensure currentUser reflects change
         await user.reload();
       }
 
-      // Mirror to Firestore (optional but recommended)
       final uid = _effectiveUid;
       if (uid != null) {
         await _firestore.collection('users').doc(uid).set({
@@ -129,22 +130,27 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
         }, SetOptions(merge: true));
       }
 
-      // optional external hook
       if (widget.onUsernameChanged != null) {
         await widget.onUsernameChanged!(newUsername);
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Username updated')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Username updated', style: GoogleFonts.poppins()),
+          ),
+        );
       }
     } catch (e) {
-      // rollback
       setState(() => _username = old);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update username: $e')),
+          SnackBar(
+            content: Text(
+              'Failed to update username: $e',
+              style: GoogleFonts.poppins(),
+            ),
+          ),
         );
       }
     } finally {
@@ -154,90 +160,159 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const Color accentColor = Color(0xFF3E82C6);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Account Details')),
+      appBar: AppBar(
+        title: Text(
+          'Account Details',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: accentColor,
+        centerTitle: true,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
       body: SafeArea(
         child:
             _loading
                 ? const Center(child: CircularProgressIndicator())
                 : Padding(
-                  padding: const EdgeInsets.all(16.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
+                      const SizedBox(height: 20),
+                      Image.asset(
+                        'assets/logo/new_shield.png',
+                        width: 100,
+                        height: 100,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Account Details 👤',
+                        style: GoogleFonts.poppins(
+                          fontSize: 26,
+                          fontWeight: FontWeight.w700,
+                          color: accentColor,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Manage your personal information for a secure experience.',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.black54,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 30),
                       Card(
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(18),
                         ),
-                        elevation: 2,
+                        elevation: 3,
                         child: ListTile(
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 12,
                           ),
                           leading: CircleAvatar(
+                            backgroundColor: accentColor.withOpacity(0.3),
                             child: Text(
                               _username.isNotEmpty
                                   ? _username[0].toUpperCase()
                                   : '?',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
+                                fontSize: 24,
+                                color: accentColor,
                               ),
                             ),
                           ),
                           title: Text(
                             _username,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
+                            style: GoogleFonts.poppins(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
-                          subtitle: Text(_email),
+                          subtitle: Text(
+                            _email,
+                            style: GoogleFonts.poppins(color: Colors.black54),
+                          ),
                           trailing:
                               _saving
                                   ? const SizedBox(
-                                    width: 24,
-                                    height: 24,
+                                    width: 28,
+                                    height: 28,
                                     child: CircularProgressIndicator(
-                                      strokeWidth: 2,
+                                      strokeWidth: 3,
                                     ),
                                   )
                                   : IconButton(
                                     tooltip: 'Edit username',
-                                    icon: const Icon(Icons.edit),
+                                    icon: Icon(Icons.edit, color: accentColor),
                                     onPressed: _showEditUsernameDialog,
                                   ),
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 30),
                       Text(
                         'Account',
-                        style: Theme.of(context).textTheme.titleMedium,
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: accentColor,
+                        ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 12),
                       ListTile(
                         leading: const Icon(Icons.email_outlined),
-                        title: const Text('Email'),
-                        subtitle: Text(_email),
+                        title: Text(
+                          'Email',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(_email, style: GoogleFonts.poppins()),
                         enabled: false,
                       ),
                       const Divider(),
                       ListTile(
                         leading: const Icon(Icons.logout),
-                        title: const Text('Sign out'),
+                        title: Text(
+                          'Sign out',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         onTap: () {
                           showDialog(
                             context: context,
                             builder:
                                 (c) => AlertDialog(
-                                  title: const Text('Sign out'),
-                                  content: const Text(
+                                  title: Text(
+                                    'Sign out',
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  content: Text(
                                     'Are you sure you want to sign out?',
+                                    style: GoogleFonts.poppins(),
                                   ),
                                   actions: [
                                     TextButton(
                                       onPressed: () => Navigator.of(c).pop(),
-                                      child: const Text('CANCEL'),
+                                      child: Text(
+                                        'CANCEL',
+                                        style: GoogleFonts.poppins(),
+                                      ),
                                     ),
                                     ElevatedButton(
                                       onPressed: () async {
@@ -249,7 +324,12 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                                           ).pushReplacementNamed('/login');
                                         }
                                       },
-                                      child: const Text('SIGN OUT'),
+                                      child: Text(
+                                        'SIGN OUT',
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.white,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -260,9 +340,10 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                       Center(
                         child: Text(
                           'Tap the pencil icon to edit your username.',
-                          style: Theme.of(context).textTheme.bodySmall,
+                          style: GoogleFonts.poppins(color: Colors.black54),
                         ),
                       ),
+                      const SizedBox(height: 15),
                     ],
                   ),
                 ),

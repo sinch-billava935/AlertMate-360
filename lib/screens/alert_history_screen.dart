@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AlertHistoryScreen extends StatelessWidget {
   const AlertHistoryScreen({super.key});
@@ -13,22 +14,36 @@ class AlertHistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final accentColor = const Color(0xFF3E82C6);
+
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFDFDFD),
+      backgroundColor: const Color(0xFFF4F6FB),
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           "Alert History",
-          style: TextStyle(color: Colors.white),
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
         ),
         backgroundColor: Colors.redAccent,
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 0,
       ),
       body:
           user == null
-              ? const Center(child: Text("Please log in to view alerts."))
+              ? Center(
+                child: Text(
+                  "Please log in to view alerts.",
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    color: Colors.black54,
+                  ),
+                ),
+              )
               : StreamBuilder<QuerySnapshot>(
                 stream:
                     FirebaseFirestore.instance
@@ -43,21 +58,28 @@ class AlertHistoryScreen extends StatelessWidget {
                   }
                   if (snapshot.hasError) {
                     return Center(
-                      child: Text('Error loading history: ${snapshot.error}'),
+                      child: Text(
+                        'Error loading history: ${snapshot.error}',
+                        style: GoogleFonts.poppins(color: Colors.redAccent),
+                      ),
                     );
                   }
                   final docs = snapshot.data?.docs ?? [];
                   if (docs.isEmpty) {
-                    return const Center(
+                    return Center(
                       child: Text(
                         "No alerts yet. Tap SOS to trigger one.",
-                        style: TextStyle(fontSize: 16, color: Colors.black54),
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          color: Colors.black54,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     );
                   }
 
                   return ListView.separated(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(4),
                     itemCount: docs.length,
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, i) {
@@ -69,32 +91,47 @@ class AlertHistoryScreen extends StatelessWidget {
                       final ts = (data['timestamp'] as Timestamp?)?.toDate();
 
                       return Card(
-                        elevation: 3,
+                        elevation: 4,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(15),
                         ),
                         child: ListTile(
+                          contentPadding: const EdgeInsets.all(16),
                           leading: CircleAvatar(
                             backgroundColor: Colors.red.shade100,
-                            child: const Icon(Icons.warning, color: Colors.red),
+                            child: const Icon(
+                              Icons.warning_amber_rounded,
+                              color: Colors.red,
+                            ),
                           ),
                           title: Text(
                             'SOS triggered by $name',
-                            style: const TextStyle(
+                            style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w600,
                               fontSize: 16,
+                              color: Colors.black87,
                             ),
                           ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              const SizedBox(height: 4),
                               if (lat != null && lon != null)
-                                Text('Location: $lat, $lon'),
+                                Text(
+                                  'Location: $lat, $lon',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.black54,
+                                  ),
+                                ),
                               if (ts != null)
-                                Text('Time: ${_formatDate(ts.toLocal())}'),
+                                Text(
+                                  'Time: ${_formatDate(ts.toLocal())}',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.black54,
+                                  ),
+                                ),
                             ],
                           ),
-                          contentPadding: const EdgeInsets.all(12),
                         ),
                       );
                     },

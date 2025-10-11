@@ -1,7 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:alertmate360/screens/forgot_password_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import 'login_screen.dart';
 import 'onboarding_screen.dart';
 
@@ -15,7 +18,7 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _nameController = TextEditingController(); // added
+  final _nameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
 
@@ -31,7 +34,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
         final uid = userCredential.user!.uid;
 
-        // Save the user's name in Firestore
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'name': _nameController.text.trim(),
           'email': _emailController.text.trim(),
@@ -39,23 +41,24 @@ class _SignupScreenState extends State<SignupScreen> {
           'createdAt': FieldValue.serverTimestamp(),
         });
 
-        // Save the name locally for SOS messages
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('user_name', _nameController.text.trim());
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("✅ Account created!")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("✅ Account created!", style: GoogleFonts.poppins()),
+          ),
+        );
 
-        // Navigate to onboarding or home screen
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => OnboardingScreen()),
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const OnboardingScreen()),
         );
       } catch (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("Sign up failed: $e")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Sign up failed: $e", style: GoogleFonts.poppins()),
+          ),
+        );
       } finally {
         setState(() => _isLoading = false);
       }
@@ -64,11 +67,20 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final Color headerColor = const Color(0xFF003366);
+    final Color buttonColor = const Color(0xFF0055);
+
     return Scaffold(
-      backgroundColor: Color(0xFFF2F7FF),
+      backgroundColor: const Color(0xFFF2F7FF),
       appBar: AppBar(
-        title: Text("Sign Up", style: TextStyle(color: Colors.white)),
-        backgroundColor: Color(0xFF003366),
+        title: Text(
+          "Sign Up",
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: headerColor,
         centerTitle: true,
       ),
       body: Padding(
@@ -77,58 +89,66 @@ class _SignupScreenState extends State<SignupScreen> {
           key: _formKey,
           child: ListView(
             children: [
-              SizedBox(height: 60),
+              const SizedBox(height: 40),
+              Center(
+                child: Image.asset(
+                  'assets/logo/new_shield.png',
+                  width: 100,
+                  height: 100,
+                ),
+              ),
+              const SizedBox(height: 10),
               Text(
                 "Create a New Account",
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 28,
+                style: GoogleFonts.poppins(
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF003366),
+                  fontSize: 28,
+                  color: headerColor,
                 ),
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 10),
               Text(
                 "Register to use AlertMate 360 services.",
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.black54),
+                style: GoogleFonts.poppins(color: Colors.black54, fontSize: 16),
               ),
-              SizedBox(height: 30),
-
-              // Name Field
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _nameController,
                 decoration: InputDecoration(
                   labelText: "Full Name",
-                  prefixIcon: Icon(Icons.person),
-                  border: OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.person),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 validator:
                     (value) => value!.isEmpty ? 'Please enter your name' : null,
               ),
-              SizedBox(height: 20),
-
-              // Email Field
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _emailController,
                 decoration: InputDecoration(
                   labelText: "Email",
-                  prefixIcon: Icon(Icons.email),
-                  border: OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.email),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 validator:
                     (value) => value!.isEmpty ? 'Please enter email' : null,
               ),
-              SizedBox(height: 20),
-
-              // Password Field
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _passwordController,
                 obscureText: true,
                 decoration: InputDecoration(
                   labelText: "Password",
-                  prefixIcon: Icon(Icons.lock),
-                  border: OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.lock),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 validator:
                     (value) =>
@@ -136,41 +156,48 @@ class _SignupScreenState extends State<SignupScreen> {
                             ? 'Password must be at least 6 characters'
                             : null,
               ),
-              SizedBox(height: 30),
-
-              // Sign Up Button
+              const SizedBox(height: 30),
               ElevatedButton(
                 onPressed: _isLoading ? null : _signUp,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF0055A4),
-                  padding: EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: buttonColor,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
                 child:
                     _isLoading
-                        ? CircularProgressIndicator(color: Colors.white)
+                        ? const CircularProgressIndicator(color: Colors.white)
                         : Text(
                           "Sign Up",
-                          style: TextStyle(fontSize: 16, color: Colors.white),
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            color: Colors.white,
+                          ),
                         ),
               ),
-              SizedBox(height: 25),
-
-              // Already have an account
+              const SizedBox(height: 25),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text("Already have an account? "),
+                  Text(
+                    "Already have an account? ",
+                    style: GoogleFonts.poppins(),
+                  ),
                   TextButton(
                     onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => LoginScreen()),
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
                       );
                     },
-                    child: Text("Login"),
+                    child: Text(
+                      "Login",
+                      style: GoogleFonts.poppins(
+                        color: headerColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),

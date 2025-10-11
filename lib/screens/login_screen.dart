@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import 'onboarding_screen.dart';
 import 'signup_screen.dart';
 
@@ -18,14 +20,24 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
+  final Color headerColor = const Color(0xFF003366);
+  final Color buttonColor = const Color(0xFF0055A4);
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF2F7FF),
+      backgroundColor: const Color(0xFFF2F7FF),
       appBar: AppBar(
-        title: Text("Login", style: TextStyle(color: Colors.white)),
-        backgroundColor: Color(0xFF003366),
+        title: Text(
+          "Login",
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: headerColor,
         centerTitle: true,
+        elevation: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -33,63 +45,86 @@ class _LoginScreenState extends State<LoginScreen> {
           key: _formKey,
           child: ListView(
             children: [
-              SizedBox(height: 80),
+              const SizedBox(height: 40),
+              Center(
+                child: Image.asset(
+                  'assets/logo/new_shield.png',
+                  width: 100,
+                  height: 100,
+                ),
+              ),
+              const SizedBox(height: 30),
               Text(
                 "Welcome Back 👋",
-                style: TextStyle(
+                style: GoogleFonts.poppins(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF003366),
+                  color: headerColor,
                 ),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Text(
                 "Login to your AlertMate 360 account",
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.black54),
+                style: GoogleFonts.poppins(color: Colors.black54, fontSize: 16),
               ),
-              SizedBox(height: 40),
-
+              const SizedBox(height: 40),
               TextFormField(
                 controller: _emailController,
                 decoration: InputDecoration(
                   labelText: "Email",
-                  prefixIcon: Icon(Icons.email),
-                  border: OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.email),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 validator:
-                    (value) => value!.isEmpty ? 'Please enter email' : null,
+                    (value) =>
+                        (value == null || value.isEmpty)
+                            ? 'Please enter email'
+                            : null,
+                keyboardType: TextInputType.emailAddress,
               ),
-              SizedBox(height: 20),
-
+              const SizedBox(height: 20),
               TextFormField(
                 controller: _passwordController,
                 obscureText: true,
                 decoration: InputDecoration(
                   labelText: "Password",
-                  prefixIcon: Icon(Icons.lock),
-                  border: OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.lock),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 validator:
-                    (value) => value!.isEmpty ? 'Please enter password' : null,
+                    (value) =>
+                        (value == null || value.isEmpty)
+                            ? 'Please enter password'
+                            : null,
               ),
-              SizedBox(height: 15),
-
+              const SizedBox(height: 15),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => ForgotPasswordScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const ForgotPasswordScreen(),
+                      ),
                     );
                   },
-                  child: Text("Forgot Password?"),
+                  child: Text(
+                    "Forgot Password?",
+                    style: GoogleFonts.poppins(
+                      color: buttonColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
-              SizedBox(height: 20),
-
+              const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () async {
                   if (_formKey.currentState!.validate()) {
@@ -100,7 +135,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             password: _passwordController.text.trim(),
                           );
 
-                      // 🔹 Fetch user name from Firestore
                       final uid = userCredential.user!.uid;
                       final snapshot =
                           await FirebaseFirestore.instance
@@ -110,50 +144,64 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       String userName = snapshot['name'] ?? 'User';
 
-                      // 🔹 Save name locally using SharedPreferences
                       SharedPreferences prefs =
                           await SharedPreferences.getInstance();
                       await prefs.setString('userName', userName);
 
-                      // Navigate to Onboarding if login successful
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => OnboardingScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const OnboardingScreen(),
+                        ),
                       );
                     } catch (e) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text("Login failed: ${e.toString()}"),
+                          content: Text(
+                            "Login failed: ${e.toString()}",
+                            style: GoogleFonts.poppins(),
+                          ),
                         ),
                       );
                     }
                   }
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF0055A4),
-                  padding: EdgeInsets.symmetric(vertical: 14),
+                  backgroundColor: buttonColor,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
+                  elevation: 5,
                 ),
                 child: Text(
                   "Login",
-                  style: TextStyle(fontSize: 16, color: Colors.white),
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-              SizedBox(height: 30),
+              const SizedBox(height: 30),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text("Don't have an account? "),
+                  Text("Don't have an account? ", style: GoogleFonts.poppins()),
                   TextButton(
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => SignupScreen()),
+                        MaterialPageRoute(builder: (_) => const SignupScreen()),
                       );
                     },
-                    child: Text("Sign Up"),
+                    child: Text(
+                      "Sign Up",
+                      style: GoogleFonts.poppins(
+                        color: buttonColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                 ],
               ),

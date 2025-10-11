@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'sos_screen.dart';
 import 'health_stats_screen.dart';
 import 'map_screen.dart';
@@ -32,33 +33,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _email = 'no-email@example.com';
   bool _loading = true;
 
-  // Voice trigger state
   bool _voiceTriggerEnabled = false;
   SpeechDetectionService? _speechService;
   bool _isListening = false;
   String _speechStatus = '';
 
+  int _selectedIndex = 0;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
     _user = _auth.currentUser;
     _email = _user?.email ?? 'no-email@example.com';
     _subscribeToUserDoc();
     _loadVoiceTriggerSetting();
-
-    // ✅ Initialize Notification Listeners for foreground & onMessageOpenedApp
     _setupNotificationListeners();
-
-    // ✅ Make sure local + push notifications are ready
     Future.microtask(() => NotificationService.init());
   }
 
-  // 🧭 Setup FCM listeners for foreground & background
   void _setupNotificationListeners() {
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('🚨 Foreground message received: ${message.notification?.title}');
       NotificationService.showNotification(
         title: message.notification?.title ?? 'AlertMate 360',
         body: message.notification?.body ?? 'You have a new alert',
@@ -66,21 +61,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('📲 Notification tapped: ${message.data}');
-      // 👉 Example: navigate to SOS Screen if it's an emergency alert
       Navigator.push(context, MaterialPageRoute(builder: (_) => SosScreen()));
     });
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-
-    if (state == AppLifecycleState.paused) {
-      _stopVoiceTrigger();
-    } else if (state == AppLifecycleState.resumed && _voiceTriggerEnabled) {
-      _startVoiceTrigger();
-    }
   }
 
   void _subscribeToUserDoc() {
@@ -94,41 +76,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     final docRef = _fs.collection('users').doc(uid);
-    _docSub = docRef.snapshots().listen(
-      (snap) {
-        if (!mounted) return;
-        final data = snap.data();
-        final fromFs = (data?['username'] as String?)?.trim();
-        setState(() {
-          _username =
-              fromFs?.isNotEmpty == true
-                  ? fromFs!
-                  : (_auth.currentUser?.displayName ?? 'User');
-          _email = _auth.currentUser?.email ?? _email;
-          _loading = false;
-        });
-      },
-      onError: (e) {
-        debugPrint('Failed to listen to user doc: $e');
-        if (mounted) {
-          setState(() {
-            _username = _auth.currentUser?.displayName ?? 'User';
-            _loading = false;
-          });
-        }
-      },
-    );
+    _docSub = docRef.snapshots().listen((snap) {
+      if (!mounted) return;
+      final data = snap.data();
+      final fromFs = (data?['username'] as String?)?.trim();
+      setState(() {
+        _username =
+            fromFs?.isNotEmpty == true
+                ? fromFs!
+                : (_auth.currentUser?.displayName ?? 'User');
+        _email = _auth.currentUser?.email ?? _email;
+        _loading = false;
+      });
+    });
   }
 
   Future<void> _loadVoiceTriggerSetting() async {
     final enabled = await _settingsService.isVoiceTriggerEnabled();
-    setState(() {
-      _voiceTriggerEnabled = enabled;
-    });
-
-    if (enabled) {
-      _initVoiceTrigger();
-    }
+    setState(() => _voiceTriggerEnabled = enabled);
+    if (enabled) _initVoiceTrigger();
   }
 
   Future<void> _initVoiceTrigger() async {
@@ -137,79 +103,50 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       onError: _onSpeechError,
       onStatusUpdate: _onSpeechStatusUpdate,
     );
-
     final initialized = await _speechService!.initialize();
-    if (initialized && _voiceTriggerEnabled) {
-      await _startVoiceTrigger();
-    }
+    if (initialized && _voiceTriggerEnabled) await _startVoiceTrigger();
   }
 
   Future<void> _startVoiceTrigger() async {
     if (_speechService == null || _isListening) return;
-
-    try {
-      _speechService!.startListening();
-      setState(() {
-        _isListening = true;
-        _speechStatus = 'Listening for "help"...';
-      });
-    } catch (e) {
-      debugPrint('Failed to start voice trigger: $e');
-    }
+    _speechService!.startListening();
+    setState(() {
+      _isListening = true;
+      _speechStatus = 'Listening for "help"...';
+    });
   }
 
   Future<void> _stopVoiceTrigger() async {
     if (_speechService == null || !_isListening) return;
-
-    try {
-      _speechService!.stopListening();
-      setState(() {
-        _isListening = false;
-        _speechStatus = '';
-      });
-    } catch (e) {
-      debugPrint('Failed to stop voice trigger: $e');
-    }
+    _speechService!.stopListening();
+    setState(() {
+      _isListening = false;
+      _speechStatus = '';
+    });
   }
 
   void _onHelpDetected() {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Detected 'help' - Triggering SOS"),
-        duration: Duration(seconds: 2),
-      ),
+      const SnackBar(content: Text("Detected 'help' - Triggering SOS")),
     );
     Navigator.push(context, MaterialPageRoute(builder: (_) => SosScreen()));
   }
 
   void _onSpeechError(String error) {
-    debugPrint('Speech detection error: $error');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Voice trigger error: $error'),
-        duration: const Duration(seconds: 3),
-      ),
-    );
-
-    if (_voiceTriggerEnabled) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Voice trigger error: $error')));
+    if (_voiceTriggerEnabled)
       Future.delayed(const Duration(seconds: 2), _startVoiceTrigger);
-    }
   }
 
   void _onSpeechStatusUpdate(String status) {
-    if (mounted) {
-      setState(() {
-        _speechStatus = status;
-      });
-    }
+    if (mounted) setState(() => _speechStatus = status);
   }
 
   Future<void> _toggleVoiceTrigger(bool enabled) async {
     await _settingsService.setVoiceTriggerEnabled(enabled);
-    setState(() {
-      _voiceTriggerEnabled = enabled;
-    });
-
+    setState(() => _voiceTriggerEnabled = enabled);
     if (enabled) {
       if (_speechService == null) {
         await _initVoiceTrigger();
@@ -240,30 +177,75 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  Widget _buildFeatureCard({
+    required IconData icon,
+    required Color color,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [color.withOpacity(0.1), Colors.white],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(2),
+        leading: Icon(icon, color: color, size: 30),
+        title: Text(
+          title,
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: GoogleFonts.poppins(fontSize: 13, color: Colors.black54),
+        ),
+        onTap: onTap,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final displayName = _username;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const Color accentColor = Color(0xFF3E82C6);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F7FF),
+      backgroundColor:
+          isDark ? const Color(0xFF0E1117) : const Color(0xFFF4F6FB),
       appBar: AppBar(
-        title: const Text(
-          "AlertMate 360",
-          style: TextStyle(color: Colors.white),
-        ),
+        elevation: 0,
+        backgroundColor: accentColor,
         centerTitle: true,
-        backgroundColor: const Color(0xFF3E82C6),
+        title: Text(
+          "AlertMate 360",
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
         actions: [
           IconButton(
-            tooltip: 'Settings',
-            icon: const Icon(Icons.settings),
-            color: Colors.white,
+            icon: const Icon(Icons.settings, color: Colors.white),
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder:
-                      (context) => SettingsScreen(
+                      (_) => SettingsScreen(
                         initialVoiceTriggerState: _voiceTriggerEnabled,
                         onVoiceTriggerChanged: _toggleVoiceTrigger,
                       ),
@@ -272,15 +254,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             },
           ),
           IconButton(
-            tooltip: 'Account',
-            icon: const Icon(Icons.account_circle_outlined),
-            color: Colors.white,
+            icon: const Icon(
+              Icons.account_circle_outlined,
+              color: Colors.white,
+            ),
             onPressed: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder:
-                      (context) => AccountDetailsScreen(
+                      (_) => AccountDetailsScreen(
                         onUsernameChanged: (newName) async {},
                       ),
                 ),
@@ -289,199 +272,180 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child:
-            _loading
-                ? const Center(child: CircularProgressIndicator())
-                : Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+      body:
+          _loading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
                   children: [
-                    const SizedBox(height: 30),
-                    Text(
-                      "Welcome, $displayName!",
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF003366),
-                      ),
+                    const SizedBox(height: 10),
+                    Image.asset(
+                      'assets/logo/new_shield.png',
+                      width: 100,
+                      height: 100,
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      "Your safety companion for health monitoring & instant SOS.",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 16, color: Colors.black54),
+                    Text(
+                      "Welcome, $displayName 👋",
+                      style: GoogleFonts.poppins(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w700,
+                        color: accentColor,
+                      ),
                     ),
-                    const SizedBox(height: 30),
-
-                    if (_voiceTriggerEnabled)
-                      Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: 8,
-                              horizontal: 16,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(Icons.mic, color: Colors.green, size: 16),
-                                SizedBox(width: 8),
-                                Text(
-                                  "Voice trigger active",
-                                  style: TextStyle(color: Colors.green),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-                          if (_speechStatus.isNotEmpty)
-                            Text(
-                              _speechStatus,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[700],
-                                fontStyle: FontStyle.italic,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                        ],
+                    const SizedBox(height: 8),
+                    Text(
+                      "Your safety companion for health & SOS alerts",
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        color: Colors.black54,
                       ),
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(height: 20),
-
-                    // SOS Feature Card
-                    Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                    if (_voiceTriggerEnabled)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.mic, color: Colors.green),
+                            const SizedBox(width: 8),
+                            Text(
+                              "Voice trigger active",
+                              style: GoogleFonts.poppins(color: Colors.green),
+                            ),
+                          ],
+                        ),
                       ),
-                      child: ListTile(
-                        leading: const Icon(
-                          Icons.warning_amber_rounded,
-                          color: Colors.red,
-                          size: 32,
-                        ),
-                        title: const Text("Trigger SOS"),
-                        subtitle: const Text(
-                          "Send an emergency alert with location",
-                        ),
-                        onTap: () {
-                          Navigator.push(
+                    const SizedBox(height: 1),
+                    _buildFeatureCard(
+                      icon: Icons.warning_amber_rounded,
+                      color: Colors.redAccent,
+                      title: "Trigger SOS",
+                      subtitle: "Send emergency alert with live location",
+                      onTap:
+                          () => Navigator.push(
                             context,
                             MaterialPageRoute(builder: (_) => SosScreen()),
-                          );
-                        },
-                      ),
+                          ),
                     ),
-                    const SizedBox(height: 20),
-
-                    // Health Stats Feature Card
-                    Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        leading: const Icon(
-                          Icons.monitor_heart,
-                          color: Colors.green,
-                          size: 32,
-                        ),
-                        title: const Text("Health Stats"),
-                        subtitle: const Text(
-                          "Track SpO2, heart rate, and temperature",
-                        ),
-                        onTap: () {
-                          Navigator.push(
+                    _buildFeatureCard(
+                      icon: Icons.monitor_heart,
+                      color: Colors.teal,
+                      title: "Health Stats",
+                      subtitle: "Monitor SpO2, heart rate & temperature",
+                      onTap:
+                          () => Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => HealthStatsScreen(),
                             ),
-                          );
-                        },
-                      ),
+                          ),
                     ),
-                    const SizedBox(height: 20),
-
-                    // Map Feature Card
-                    Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        leading: const Icon(
-                          Icons.map_rounded,
-                          color: Colors.blue,
-                          size: 32,
-                        ),
-                        title: const Text("Map View"),
-                        subtitle: const Text("View your current location"),
-                        onTap: () {
-                          Navigator.push(
+                    _buildFeatureCard(
+                      icon: Icons.map_rounded,
+                      color: Colors.blueAccent,
+                      title: "Map View",
+                      subtitle: "Track your current location in real time",
+                      onTap:
+                          () => Navigator.push(
                             context,
                             MaterialPageRoute(builder: (_) => MapScreen()),
-                          );
-                        },
-                      ),
+                          ),
                     ),
-                    const SizedBox(height: 20),
-
-                    // Emergency Contacts Feature Card
-                    Card(
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        leading: const Icon(
-                          Icons.contacts,
-                          color: Colors.deepPurple,
-                          size: 32,
-                        ),
-                        title: const Text("Emergency Contacts"),
-                        subtitle: const Text(
-                          "Manage your emergency contact list",
-                        ),
-                        onTap: () {
-                          Navigator.push(
+                    _buildFeatureCard(
+                      icon: Icons.contacts_rounded,
+                      color: Colors.deepPurple,
+                      title: "Emergency Contacts",
+                      subtitle: "Manage your emergency contact list",
+                      onTap:
+                          () => Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (_) => EmergencyContactsScreen(),
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    const Spacer(),
-
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.logout, color: Colors.white),
-                        label: const Text(
-                          "Logout",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.redAccent,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
                           ),
-                        ),
-                        onPressed: _signOut,
-                      ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 30),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.logout, color: Colors.white),
+                      label: Text(
+                        "Logout",
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                          horizontal: 24,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                      ),
+                      onPressed: _signOut,
+                    ),
+                    const SizedBox(height: 30),
                   ],
                 ),
+              ),
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: accentColor,
+        unselectedItemColor: Colors.black54,
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() => _selectedIndex = index);
+          if (index == 0) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => SosScreen()),
+            );
+          } else if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => HealthStatsScreen()),
+            );
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => MapScreen()),
+            );
+          } else if (index == 3) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => EmergencyContactsScreen()),
+            );
+          }
+        },
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.warning_amber_rounded),
+            label: "Trigger SOS",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.monitor_heart),
+            label: "Health",
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.map_rounded), label: "Map"),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.contacts_rounded),
+            label: "Contacts",
+          ),
+        ],
       ),
     );
   }
