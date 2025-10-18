@@ -4,13 +4,16 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
-import 'alert_history_screen.dart';
-import 'health_stats_screen.dart';
-import 'map_screen.dart';
-import 'sos_screen.dart';
 
 class EmergencyContactsScreen extends StatefulWidget {
-  const EmergencyContactsScreen({super.key});
+  final int selectedIndex;
+  final ValueChanged<int> onTabChanged;
+
+  const EmergencyContactsScreen({
+    super.key,
+    required this.selectedIndex,
+    required this.onTabChanged,
+  });
 
   @override
   _EmergencyContactsScreenState createState() =>
@@ -251,18 +254,6 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6FB),
-      appBar: AppBar(
-        title: Text(
-          "Emergency Contacts",
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: accentColor,
-        centerTitle: true,
-        elevation: 0,
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Column(
@@ -463,49 +454,6 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        selectedItemColor: accentColor,
-        unselectedItemColor: Colors.black54,
-        currentIndex: 3,
-        type: BottomNavigationBarType.fixed,
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const SosScreen()),
-            );
-          } else if (index == 1) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const HealthStatsScreen()),
-            );
-          } else if (index == 2) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => MapScreen()),
-            );
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.warning_amber_rounded),
-            label: "Trigger SOS",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.monitor_heart),
-            label: "Health",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.map_rounded),
-            label: "Map View",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.contacts_rounded),
-            label: "Contacts",
-          ),
-        ],
       ),
     );
   }

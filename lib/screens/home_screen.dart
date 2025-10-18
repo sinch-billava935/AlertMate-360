@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import 'sos_screen.dart';
 import 'health_stats_screen.dart';
 import 'map_screen.dart';
@@ -39,11 +40,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _speechStatus = '';
 
   int _selectedIndex = 0;
+  late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _pageController = PageController(initialPage: _selectedIndex);
+
     _user = _auth.currentUser;
     _email = _user?.email ?? 'no-email@example.com';
     _subscribeToUserDoc();
@@ -61,7 +65,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
 
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      Navigator.push(context, MaterialPageRoute(builder: (_) => SosScreen()));
+      _pageController.jumpToPage(1); // Navigate to SOS screen
     });
   }
 
@@ -129,7 +133,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Detected 'help' - Triggering SOS")),
     );
-    Navigator.push(context, MaterialPageRoute(builder: (_) => SosScreen()));
+    _pageController.jumpToPage(1); // Navigate to SOS screen
   }
 
   void _onSpeechError(String error) {
@@ -162,6 +166,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void dispose() {
     _docSub?.cancel();
     _speechService?.dispose();
+    _pageController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -217,9 +222,119 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  Widget _buildHomeContent() {
+    final displayName = _username;
+    const Color accentColor = Color(0xFF3E82C6);
+
+    return _loading
+        ? const Center(child: CircularProgressIndicator())
+        : SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+              Image.asset(
+                'assets/logo/new_shield.png',
+                width: 100,
+                height: 100,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                "Welcome, $displayName 👋",
+                style: GoogleFonts.poppins(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: accentColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Your safety companion for health & SOS alerts",
+                style: GoogleFonts.poppins(fontSize: 14, color: Colors.black54),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              if (_voiceTriggerEnabled)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.mic, color: Colors.green),
+                      const SizedBox(width: 8),
+                      Text(
+                        "Voice trigger active",
+                        style: GoogleFonts.poppins(color: Colors.green),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 1),
+              _buildFeatureCard(
+                icon: Icons.warning_amber_rounded,
+                color: Colors.redAccent,
+                title: "Trigger SOS",
+                subtitle: "Send emergency alert with live location",
+                onTap: () => _pageController.jumpToPage(1),
+              ),
+              _buildFeatureCard(
+                icon: Icons.monitor_heart,
+                color: Colors.teal,
+                title: "Health Stats",
+                subtitle: "Monitor SpO2, heart rate & temperature",
+                onTap: () => _pageController.jumpToPage(2),
+              ),
+              _buildFeatureCard(
+                icon: Icons.map_rounded,
+                color: Colors.blueAccent,
+                title: "Map View",
+                subtitle: "Track your current location in real time",
+                onTap: () => _pageController.jumpToPage(3),
+              ),
+              _buildFeatureCard(
+                icon: Icons.contacts_rounded,
+                color: Colors.deepPurple,
+                title: "Emergency Contacts",
+                subtitle: "Manage your emergency contact list",
+                onTap: () => _pageController.jumpToPage(4),
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.logout, color: Colors.white),
+                label: Text(
+                  "Logout",
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 24,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                onPressed: _signOut,
+              ),
+              const SizedBox(height: 30),
+            ],
+          ),
+        );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final displayName = _username;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     const Color accentColor = Color(0xFF3E82C6);
 
@@ -272,135 +387,55 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ],
       ),
-      body:
-          _loading
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 10),
-                    Image.asset(
-                      'assets/logo/new_shield.png',
-                      width: 100,
-                      height: 100,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      "Welcome, $displayName 👋",
-                      style: GoogleFonts.poppins(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700,
-                        color: accentColor,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Your safety companion for health & SOS alerts",
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.black54,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    if (_voiceTriggerEnabled)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.mic, color: Colors.green),
-                            const SizedBox(width: 8),
-                            Text(
-                              "Voice trigger active",
-                              style: GoogleFonts.poppins(color: Colors.green),
-                            ),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 1),
-                    _buildFeatureCard(
-                      icon: Icons.warning_amber_rounded,
-                      color: Colors.redAccent,
-                      title: "Trigger SOS",
-                      subtitle: "Send emergency alert with live location",
-                      onTap:
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => SosScreen()),
-                          ),
-                    ),
-                    _buildFeatureCard(
-                      icon: Icons.monitor_heart,
-                      color: Colors.teal,
-                      title: "Health Stats",
-                      subtitle: "Monitor SpO2, heart rate & temperature",
-                      onTap:
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => HealthStatsScreen(),
-                            ),
-                          ),
-                    ),
-                    _buildFeatureCard(
-                      icon: Icons.map_rounded,
-                      color: Colors.blueAccent,
-                      title: "Map View",
-                      subtitle: "Track your current location in real time",
-                      onTap:
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => MapScreen()),
-                          ),
-                    ),
-                    _buildFeatureCard(
-                      icon: Icons.contacts_rounded,
-                      color: Colors.deepPurple,
-                      title: "Emergency Contacts",
-                      subtitle: "Manage your emergency contact list",
-                      onTap:
-                          () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => EmergencyContactsScreen(),
-                            ),
-                          ),
-                    ),
-                    const SizedBox(height: 30),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.logout, color: Colors.white),
-                      label: Text(
-                        "Logout",
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 14,
-                          horizontal: 24,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                      ),
-                      onPressed: _signOut,
-                    ),
-                    const SizedBox(height: 30),
-                  ],
-                ),
-              ),
+      body: PageView(
+        controller: _pageController,
+        onPageChanged: (index) {
+          setState(() => _selectedIndex = index);
+        },
+        children: [
+          _buildHomeContent(),
+          SosScreen(
+            selectedIndex: _selectedIndex,
+            onTabChanged: (index) {
+              _pageController.animateToPage(
+                index,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            },
+          ),
+          HealthStatsScreen(
+            selectedIndex: _selectedIndex,
+            onTabChanged: (index) {
+              _pageController.animateToPage(
+                index,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            },
+          ),
+          MapScreen(
+            selectedIndex: _selectedIndex,
+            onTabChanged: (index) {
+              _pageController.animateToPage(
+                index,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            },
+          ),
+          EmergencyContactsScreen(
+            selectedIndex: _selectedIndex,
+            onTabChanged: (index) {
+              _pageController.animateToPage(
+                index,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            },
+          ),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
@@ -408,30 +443,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         unselectedItemColor: Colors.black54,
         currentIndex: _selectedIndex,
         onTap: (index) {
-          setState(() => _selectedIndex = index);
-          if (index == 0) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => SosScreen()),
-            );
-          } else if (index == 1) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => HealthStatsScreen()),
-            );
-          } else if (index == 2) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => MapScreen()),
-            );
-          } else if (index == 3) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => EmergencyContactsScreen()),
-            );
-          }
+          _pageController.animateToPage(
+            index,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
         },
-        items: [
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(
             icon: Icon(Icons.warning_amber_rounded),
             label: "Trigger SOS",

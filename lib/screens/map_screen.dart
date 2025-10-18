@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
+
 import '../services/health_service.dart';
 import '../models/health_data.dart';
-import 'health_stats_screen.dart';
-import 'emergency_contacts_screen.dart';
-import 'sos_screen.dart';
 
 class MapScreen extends StatelessWidget {
-  MapScreen({super.key});
-  final HealthService healthService = HealthService(app: Firebase.app());
+  final int selectedIndex;
+  final ValueChanged<int> onTabChanged;
 
+  MapScreen({
+    super.key,
+    required this.selectedIndex,
+    required this.onTabChanged,
+  });
+
+  final HealthService healthService = HealthService(app: Firebase.app());
   static const Color accentColor = Color(0xFF3E82C6);
 
   @override
@@ -20,18 +27,6 @@ class MapScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor:
           isDark ? const Color(0xFF0E1117) : const Color(0xFFF4F6FB),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: accentColor,
-        centerTitle: true,
-        title: Text(
-          "Map View",
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-      ),
       body: StreamBuilder<HealthData?>(
         stream: healthService.getHealthDataStream(),
         builder: (context, snapshot) {
@@ -92,6 +87,48 @@ class MapScreen extends StatelessWidget {
                   subtitle: "${data.longitude}",
                 ),
                 const SizedBox(height: 20),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final lat = data.latitude;
+                    final lon = data.longitude;
+                    final Uri googleMapsUrl = Uri.parse(
+                      'https://www.google.com/maps/search/?api=1&query=$lat,$lon',
+                    );
+                    if (await canLaunchUrl(googleMapsUrl)) {
+                      await launchUrl(
+                        googleMapsUrl,
+                        mode: LaunchMode.externalApplication,
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Could not open Google Maps"),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.map, color: Colors.white),
+                  label: Text(
+                    "Open in Google Maps",
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accentColor,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 4,
+                    shadowColor: accentColor.withOpacity(0.3),
+                  ),
+                ),
+                const SizedBox(height: 25),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -102,13 +139,39 @@ class MapScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Center(
-                    child: Text(
-                      "Last Updated: ${DateTime.fromMillisecondsSinceEpoch(data.timestamp)}",
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.black54,
-                      ),
-                      textAlign: TextAlign.center,
+                    child: Builder(
+                      builder: (context) {
+                        try {
+                          int rawTs = data.timestamp;
+                          final int normalizedMs =
+                              (rawTs < 1000000000000) ? rawTs * 1000 : rawTs;
+                          final DateTime dt =
+                              DateTime.fromMillisecondsSinceEpoch(
+                                normalizedMs,
+                                isUtc: true,
+                              ).toLocal();
+                          final String formatted = DateFormat(
+                            'dd MMM yyyy, hh:mm a',
+                          ).format(dt);
+                          return Text(
+                            "Last Updated: $formatted",
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.black54,
+                            ),
+                            textAlign: TextAlign.center,
+                          );
+                        } catch (e) {
+                          return Text(
+                            "Last Updated: Unknown",
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.black54,
+                            ),
+                            textAlign: TextAlign.center,
+                          );
+                        }
+                      },
                     ),
                   ),
                 ),
@@ -117,51 +180,6 @@ class MapScreen extends StatelessWidget {
             ),
           );
         },
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: accentColor,
-        unselectedItemColor: Colors.black54,
-        currentIndex: 2,
-        onTap: (index) {
-          if (index == 0) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => SosScreen()),
-            );
-          } else if (index == 1) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => HealthStatsScreen()),
-            );
-          } else if (index == 2) {
-            // Stay on MapScreen
-          } else if (index == 3) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => EmergencyContactsScreen()),
-            );
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.warning_amber_rounded),
-            label: "Trigger SOS",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.monitor_heart),
-            label: "Health",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.map_rounded),
-            label: "Map View",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.contacts_rounded),
-            label: "Contacts",
-          ),
-        ],
       ),
     );
   }

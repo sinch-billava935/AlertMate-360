@@ -3,15 +3,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:location/location.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 import '../services/voice_trigger_service.dart';
 import 'alert_history_screen.dart';
-import 'health_stats_screen.dart';
-import 'map_screen.dart';
-import 'emergency_contacts_screen.dart';
 
 class SosScreen extends StatefulWidget {
-  const SosScreen({super.key});
+  final int selectedIndex;
+  final ValueChanged<int> onTabChanged;
+
+  const SosScreen({
+    super.key,
+    required this.selectedIndex,
+    required this.onTabChanged,
+  });
 
   @override
   State<SosScreen> createState() => _SosScreenState();
@@ -31,8 +34,6 @@ class _SosScreenState extends State<SosScreen> {
     'emergency',
     'alert',
   ];
-
-  int _selectedIndex = 0; // Trigger SOS tab default
 
   @override
   void initState() {
@@ -227,31 +228,6 @@ class _SosScreenState extends State<SosScreen> {
     return Scaffold(
       backgroundColor:
           isDark ? const Color(0xFF0E1117) : const Color(0xFFF4F6FB),
-      appBar: AppBar(
-        backgroundColor: accentColor,
-        elevation: 0,
-        centerTitle: true,
-        title: Text(
-          "Trigger SOS",
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            tooltip: "History",
-            icon: const Icon(Icons.history),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AlertHistoryScreen()),
-              );
-            },
-          ),
-        ],
-      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -311,54 +287,6 @@ class _SosScreenState extends State<SosScreen> {
             const SizedBox(height: 40),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: accentColor,
-        unselectedItemColor: Colors.black54,
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() => _selectedIndex = index);
-          if (index == 0) {
-            // already here
-          } else if (index == 1) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const HealthStatsScreen()),
-            );
-          } else if (index == 2) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => MapScreen()),
-            );
-          } else if (index == 3) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const EmergencyContactsScreen(),
-              ),
-            );
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.warning_amber_rounded),
-            label: "Trigger SOS",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.monitor_heart),
-            label: "Health",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.map_rounded),
-            label: "Map View",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.contacts_rounded),
-            label: "Contacts",
-          ),
-        ],
       ),
     );
   }

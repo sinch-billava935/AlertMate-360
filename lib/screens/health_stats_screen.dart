@@ -3,12 +3,16 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/health_service.dart';
 import '../models/health_data.dart';
-import 'sos_screen.dart';
-import 'map_screen.dart';
-import 'emergency_contacts_screen.dart';
 
 class HealthStatsScreen extends StatefulWidget {
-  const HealthStatsScreen({super.key});
+  final int selectedIndex;
+  final ValueChanged<int> onTabChanged;
+
+  const HealthStatsScreen({
+    super.key,
+    required this.selectedIndex,
+    required this.onTabChanged,
+  });
 
   @override
   State<HealthStatsScreen> createState() => _HealthStatsScreenState();
@@ -16,7 +20,6 @@ class HealthStatsScreen extends StatefulWidget {
 
 class _HealthStatsScreenState extends State<HealthStatsScreen> {
   final HealthService healthService = HealthService(app: Firebase.app());
-  int _selectedIndex = 1;
   static const Color accentColor = Color(0xFF3E82C6);
 
   @override
@@ -26,18 +29,6 @@ class _HealthStatsScreenState extends State<HealthStatsScreen> {
     return Scaffold(
       backgroundColor:
           isDark ? const Color(0xFF0E1117) : const Color(0xFFF4F6FB),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: accentColor,
-        centerTitle: true,
-        title: Text(
-          "Health Stats",
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-      ),
       body: StreamBuilder<HealthData?>(
         stream: healthService.getHealthDataStream(),
         builder: (context, snapshot) {
@@ -151,7 +142,7 @@ class _HealthStatsScreenState extends State<HealthStatsScreen> {
                   ),
                   child: Center(
                     child: Text(
-                      "Last Updated: ${DateTime.fromMillisecondsSinceEpoch(data.timestamp)}",
+                      "Last Updated: ${DateTime.fromMillisecondsSinceEpoch(data.timestamp).toLocal()}",
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         color: Colors.black54,
@@ -165,52 +156,6 @@ class _HealthStatsScreenState extends State<HealthStatsScreen> {
             ),
           );
         },
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: accentColor,
-        unselectedItemColor: Colors.black54,
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() => _selectedIndex = index);
-          if (index == 0) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => SosScreen()),
-            );
-          } else if (index == 1) {
-            // Stay here
-          } else if (index == 2) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => MapScreen()),
-            );
-          } else if (index == 3) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => EmergencyContactsScreen()),
-            );
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.warning_amber_rounded),
-            label: "Trigger SOS",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.monitor_heart),
-            label: "Health",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.map_rounded),
-            label: "Map View",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.contacts_rounded),
-            label: "Contacts",
-          ),
-        ],
       ),
     );
   }
