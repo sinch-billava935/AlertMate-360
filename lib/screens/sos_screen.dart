@@ -245,7 +245,7 @@ class _SosScreenState extends State<SosScreen> {
             ),
             const SizedBox(height: 10),
             Text(
-              "Tap the button or say 'SOS' to send an emergency alert.",
+              "Tap the button or say 'HELP' to send an emergency alert.",
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(fontSize: 14, color: Colors.black54),
             ),

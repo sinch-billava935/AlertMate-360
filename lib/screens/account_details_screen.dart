@@ -345,7 +345,12 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                                       child: Text(
                                         'SIGN OUT',
                                         style: GoogleFonts.poppins(
-                                          color: Colors.white,
+                                          color: const Color.fromARGB(
+                                            255,
+                                            73,
+                                            21,
+                                            215,
+                                          ),
                                         ),
                                       ),
                                     ),
