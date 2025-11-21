@@ -288,6 +288,19 @@ class _SosScreenState extends State<SosScreen> {
           ],
         ),
       ),
+      // <-- Added: FloatingActionButton that opens AlertHistoryScreen
+      floatingActionButton: FloatingActionButton(
+        heroTag: 'sosHistoryFab',
+        tooltip: 'Alert History',
+        child: const Icon(Icons.history),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AlertHistoryScreen()),
+          );
+        },
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 

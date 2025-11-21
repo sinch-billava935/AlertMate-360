@@ -76,8 +76,9 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                   hintText: 'Enter a display name',
                 ),
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty)
+                  if (value == null || value.trim().isEmpty) {
                     return 'Username cannot be empty';
+                  }
                   if (value.trim().length < 3) return 'Minimum 3 characters';
                   return null;
                 },
@@ -158,6 +159,28 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
     }
   }
 
+  Future<void> _handleSignOut(BuildContext dialogContext) async {
+    // Close the confirmation dialog first
+    Navigator.of(dialogContext).pop();
+
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Sign out failed: $e', style: GoogleFonts.poppins()),
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+
+    // Go to login and clear the stack so back can't return to a protected screen
+    Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+  }
+
   @override
   Widget build(BuildContext context) {
     const Color accentColor = Color(0xFF3E82C6);
@@ -227,7 +250,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                               _username.isNotEmpty
                                   ? _username[0].toUpperCase()
                                   : '?',
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 24,
                                 color: accentColor,
@@ -256,7 +279,10 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                                   )
                                   : IconButton(
                                     tooltip: 'Edit username',
-                                    icon: Icon(Icons.edit, color: accentColor),
+                                    icon: const Icon(
+                                      Icons.edit,
+                                      color: accentColor,
+                                    ),
                                     onPressed: _showEditUsernameDialog,
                                   ),
                         ),
@@ -315,15 +341,7 @@ class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
                                       ),
                                     ),
                                     ElevatedButton(
-                                      onPressed: () async {
-                                        Navigator.of(c).pop();
-                                        await FirebaseAuth.instance.signOut();
-                                        if (mounted) {
-                                          Navigator.of(
-                                            context,
-                                          ).pushReplacementNamed('/login');
-                                        }
-                                      },
+                                      onPressed: () => _handleSignOut(c),
                                       child: Text(
                                         'SIGN OUT',
                                         style: GoogleFonts.poppins(

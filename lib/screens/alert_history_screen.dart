@@ -14,8 +14,6 @@ class AlertHistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accentColor = const Color(0xFF3E82C6);
-
     final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(

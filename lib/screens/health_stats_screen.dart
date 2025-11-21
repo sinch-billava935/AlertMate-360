@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../services/health_service.dart';
 import '../models/health_data.dart';
 
@@ -21,6 +22,29 @@ class HealthStatsScreen extends StatefulWidget {
 class _HealthStatsScreenState extends State<HealthStatsScreen> {
   final HealthService healthService = HealthService(app: Firebase.app());
   static const Color accentColor = Color(0xFF3E82C6);
+
+  String _formatTimestamp(dynamic ts) {
+    if (ts == null) return "Last Updated: Unknown";
+    try {
+      // Parse dynamic → int
+      int raw = ts is int ? ts : int.parse(ts.toString());
+
+      // Normalize to milliseconds (if value is in seconds)
+      final int normalizedMs = (raw < 1000000000000) ? raw * 1000 : raw;
+
+      // Treat source as UTC and show in local time
+      final dt =
+          DateTime.fromMillisecondsSinceEpoch(
+            normalizedMs,
+            isUtc: true,
+          ).toLocal();
+
+      final formatted = DateFormat('dd MMM yyyy, hh:mm a').format(dt);
+      return "Last Updated: $formatted";
+    } catch (_) {
+      return "Last Updated: Unknown";
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -142,7 +166,7 @@ class _HealthStatsScreenState extends State<HealthStatsScreen> {
                   ),
                   child: Center(
                     child: Text(
-                      "Last Updated: ${DateTime.fromMillisecondsSinceEpoch(data.timestamp).toLocal()}",
+                      _formatTimestamp(data.timestamp),
                       style: GoogleFonts.poppins(
                         fontSize: 14,
                         color: Colors.black54,
